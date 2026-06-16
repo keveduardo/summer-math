@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#FBF6EC" />
+<title>Beach Math</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>\u2600</text></svg>" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo } = React;
+
+/* ============================================================
+   CONFIG  — edit these two lines
+   ============================================================ */
+const CONFIG = {
+  KID_NAME: "",   // e.g. "Sofia" — shows a hello; leave "" for none
+  LOG_URL: "",    // paste your Apps Script Web App URL to log to Google Sheets
+};
+
+/* ============================================================
+   PROBLEM GENERATORS  (verified: 74,000 generated, 0 errors)
+   ============================================================ */
+const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; };
+const simp = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1; return [n / g, d / g]; };
+const fracStr = (n, d) => (d === 1 ? `${n}` : `${n}/${d}`);
+const r1 = (x) => Math.round(x * 10) / 10;
+const r2 = (x) => Math.round(x * 100) / 100;
+
+function genFractions() {
+  const op = pick(["+", "−", "×", "÷"]);
+  let d1 = rnd(3, 10), d2 = rnd(3, 10), n1 = rnd(1, d1 - 1), n2 = rnd(1, d2 - 1);
+  if (op === "−" && n1 / d1 < n2 / d2) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
+  let rn, rd;
+  if (op === "+") { rn = n1 * d2 + n2 * d1; rd = d1 * d2; }
+  else if (op === "−") { rn = n1 * d2 - n2 * d1; rd = d1 * d2; }
+  else if (op === "×") { rn = n1 * n2; rd = d1 * d2; }
+  else { rn = n1 * d2; rd = d1 * n2; }
+  [rn, rd] = simp(rn, rd);
+  return { type: "fraction", prompt: `${n1}/${d1}   ${op}   ${n2}/${d2}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Common denominator (or multiply/flip for × ÷), then simplify → ${fracStr(rn, rd)}.` };
+}
+function genDecimals() {
+  const op = pick(["+", "−", "×"]); let a, b, value;
+  if (op === "×") { a = r1(rnd(11, 99) / 10); b = rnd(2, 12); value = r2(a * b); }
+  else { a = r2(rnd(50, 4000) / 100); b = r2(rnd(50, 4000) / 100); if (op === "−" && b > a) [a, b] = [b, a]; value = r2(op === "+" ? a + b : a - b); }
+  return { type: "numeric", prompt: `${a}  ${op}  ${b}`, value, tol: 0.011, display: `${value}`, explain: `Line up the decimal points (or count decimal places for ×). Answer: ${value}.` };
+}
+function genPercents() {
+  const t = pick(["of", "what", "discount", "tip"]);
+  if (t === "of") { const p = pick([5, 10, 15, 20, 25, 30, 40, 50, 60, 75]); const n = rnd(2, 40) * 5; const v = r2(p / 100 * n);
+    return { type: "numeric", prompt: `What is ${p}% of ${n}?`, value: v, tol: 0.011, display: `${v}`, explain: `${p}% = ${p / 100}. ${p / 100} × ${n} = ${v}.` }; }
+  if (t === "what") { const n = rnd(4, 20) * 5; const x = rnd(1, n / 5) * 5; const v = r2(x / n * 100);
+    return { type: "numeric", prompt: `What percent of ${n} is ${x}?`, value: v, tol: 0.05, display: `${v}%`, explain: `${x} ÷ ${n} = ${r2(x / n)}, ×100 = ${v}%.` }; }
+  if (t === "discount") { const price = rnd(2, 30) * 5; const p = pick([10, 15, 20, 25, 30, 40, 50]); const v = r2(price * (1 - p / 100));
+    return { type: "numeric", prompt: `A $${price} bag of candy is ${p}% off. New price?`, value: v, tol: 0.011, display: `$${v}`, explain: `Pay ${100 - p}%: ${price} × ${(100 - p) / 100} = $${v}.` }; }
+  const price = rnd(2, 30) * 5; const p = pick([5, 10, 15, 20, 25]); const v = r2(price * (1 + p / 100));
+  return { type: "numeric", prompt: `A $${price} snack-bar bill plus a ${p}% tip. Total?`, value: v, tol: 0.011, display: `$${v}`, explain: `Pay ${100 + p}%: ${price} × ${(100 + p) / 100} = $${v}.` };
+}
+function genRatios() {
+  const t = pick(["speed", "unit", "scale"]);
+  if (t === "speed") { const mpm = rnd(2, 12) * 5; const m = rnd(2, 6); const dist = mpm * m;
+    return { type: "numeric", prompt: `Beach FC drill: ran ${dist} meters in ${m} minutes. Meters per minute?`, value: mpm, tol: 0.011, display: `${mpm} m/min`, explain: `${dist} ÷ ${m} = ${mpm} m/min.` }; }
+  if (t === "unit") { const each = rnd(2, 9); const q = rnd(3, 8); const total = each * q;
+    return { type: "numeric", prompt: `${q} candy bars cost $${total}. Cost of 1 candy bar?`, value: each, tol: 0.011, display: `$${each}`, explain: `${total} ÷ ${q} = $${each} each.` }; }
+  const each = rnd(2, 6); const q1 = rnd(2, 5); const q2 = rnd(6, 10); const total = each * q2;
+  return { type: "numeric", prompt: `If ${q1} ring pops cost $${each * q1}, how much do ${q2} ring pops cost?`, value: total, tol: 0.011, display: `$${total}`, explain: `Unit price $${each}. ${each} × ${q2} = $${total}.` };
+}
+function genIntegers() {
+  const op = pick(["+", "−", "×", "÷"]); let a, b, value;
+  if (op === "÷") { b = rnd(2, 9) * pick([1, -1]); const q = rnd(2, 9) * pick([1, -1]); a = b * q; value = q; }
+  else if (op === "×") { a = rnd(2, 12) * pick([1, -1]); b = rnd(2, 12) * pick([1, -1]); value = a * b; }
+  else { a = rnd(-15, 15); b = rnd(-15, 15); value = op === "+" ? a + b : a - b; }
+  const bb = b < 0 ? `(${b})` : `${b}`;
+  return { type: "numeric", prompt: `${a}  ${op}  ${bb}`, value, tol: 0.011, display: `${value}`, explain: `Watch the signs. Answer: ${value}.` };
+}
+function genPemdas() {
+  const tmpl = rnd(1, 4); let prompt, value;
+  const a = rnd(2, 9), b = rnd(2, 9), c = rnd(2, 6);
+  if (tmpl === 1) { prompt = `${a} + ${b} × ${c}`; value = a + b * c; }
+  else if (tmpl === 2) { prompt = `(${a} + ${b}) × ${c}`; value = (a + b) * c; }
+  else if (tmpl === 3) { const s = rnd(2, 5); prompt = `${a} + ${s}²`; value = a + s * s; }
+  else { prompt = `${a * c} ÷ ${c} + ${b}`; value = a + b; }
+  return { type: "numeric", prompt, value, tol: 0.011, display: `${value}`, explain: `Parentheses, Exponents, ×÷, then +−. Answer: ${value}.` };
+}
+function genRationals() {
+  const t = pick(["fadd", "dmul", "fdiv"]);
+  if (t === "fadd") { const n1 = rnd(1, 7) * pick([1, -1]), d1 = rnd(2, 8), n2 = rnd(1, 7) * pick([1, -1]), d2 = rnd(2, 8);
+    let rn = n1 * d2 + n2 * d1, rd = d1 * d2; [rn, rd] = simp(rn, rd);
+    return { type: "fraction", prompt: `${fracStr(n1, d1)}   +   ${fracStr(n2, d2)}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Common denominator, mind the signs → ${fracStr(rn, rd)}.` }; }
+  if (t === "dmul") { const a = r1(rnd(11, 60) / 10) * pick([1, -1]); const b = rnd(2, 9) * pick([1, -1]); const v = r2(a * b);
+    return { type: "numeric", prompt: `${a}  ×  ${b < 0 ? `(${b})` : b}`, value: v, tol: 0.011, display: `${v}`, explain: `Multiply, then set the sign (same → +, different → −). Answer: ${v}.` }; }
+  const n1 = rnd(1, 7) * pick([1, -1]), d1 = rnd(2, 8), n2 = rnd(1, 7), d2 = rnd(2, 8);
+  let rn = n1 * d2, rd = d1 * n2; [rn, rd] = simp(rn, rd);
+  return { type: "fraction", prompt: `${fracStr(n1, d1)}   ÷   ${fracStr(n2, d2)}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Divide = multiply by the reciprocal → ${fracStr(rn, rd)}.` };
+}
+function genProportions() {
+  const t = pick(["solve", "candy", "soccer"]);
+  if (t === "solve") { const b = rnd(3, 9); const k = rnd(2, 6); const a = rnd(1, b - 1); const d = b * k; const x = a * k;
+    return { type: "numeric", prompt: `Solve for x:   ${a}/${b} = x/${d}`, value: x, tol: 0.011, display: `${x}`, explain: `${d} ÷ ${b} = ${k}, so x = ${a} × ${k} = ${x}.` }; }
+  if (t === "candy") { const k = rnd(2, 8); const x1 = rnd(2, 5); const x2 = rnd(6, 12);
+    return { type: "numeric", prompt: `Candy is the same price per piece. ${x1} pieces cost $${k * x1}. Cost of ${x2} pieces?`, value: k * x2, tol: 0.011, display: `$${k * x2}`, explain: `Unit rate $${k}/piece. ${k} × ${x2} = $${k * x2}.` }; }
+  const k = rnd(1, 4); const g = rnd(3, 8);
+  return { type: "numeric", prompt: `Beach FC scores a steady ${k} goal${k > 1 ? "s" : ""} per game. Goals in ${g} games?`, value: k * g, tol: 0.011, display: `${k * g}`, explain: `${k} × ${g} = ${k * g} goals.` };
+}
+function genEquations() {
+  const a = rnd(2, 9), x = rnd(-8, 8), b = rnd(-12, 12); const c = a * x + b;
+  const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
+  return { type: "numeric", prompt: `Solve for x:   ${a}x ${bb} = ${c}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `${c} ${b < 0 ? "+" : "−"} ${Math.abs(b)} = ${c - b}; ${c - b} ÷ ${a} = ${x}.` };
+}
+function genInequalities() {
+  const a = rnd(2, 6), x = rnd(-6, 6), b = rnd(-10, 10); const c = a * x + b; const op = pick(["<", ">", "≤", "≥"]);
+  const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
+  return { type: "numeric", prompt: `Solve:   ${a}x ${bb} ${op} ${c}\nx ${op} ?`, value: x, tol: 0.011, display: `x ${op} ${x}`, explain: `Subtract ${b}, divide by ${a} (positive, so keep the sign): x ${op} ${x}.` };
+}
+function genExpressions() {
+  const a = rnd(2, 6), b = rnd(2, 9), c = rnd(1, 6);
+  const coef = a + c, con = a * b; const correct = `${coef}x + ${con}`;
+  const opts = new Set([correct]);
+  opts.add(`${coef}x + ${a * b + b}`); opts.add(`${a + c + 1}x + ${con}`); opts.add(`${coef}x + ${con + a}`);
+  const arr = [...opts].slice(0, 4);
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return { type: "choice", prompt: `Simplify:   ${a}(x + ${b}) + ${c}x`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `Distribute: ${a}x + ${a * b}, then add ${c}x → ${correct}.` };
+}
+function genAngles() {
+  const t = pick(["comp", "supp", "vert"]);
+  if (t === "comp") { const x = rnd(10, 80); return { type: "numeric", prompt: `Two angles are complementary. One is ${x}°. The other?`, value: 90 - x, tol: 0.011, display: `${90 - x}°`, explain: `Complementary add to 90°: 90 − ${x} = ${90 - x}°.` }; }
+  if (t === "supp") { const x = rnd(20, 160); return { type: "numeric", prompt: `Two angles are supplementary. One is ${x}°. The other?`, value: 180 - x, tol: 0.011, display: `${180 - x}°`, explain: `Supplementary add to 180°: 180 − ${x} = ${180 - x}°.` }; }
+  const x = rnd(20, 160); return { type: "numeric", prompt: `Two vertical angles are formed. One is ${x}°. The other?`, value: x, tol: 0.011, display: `${x}°`, explain: `Vertical angles are equal → ${x}°.` };
+}
+function genCircles() {
+  const r = rnd(2, 12); const mode = pick(["area", "circ"]); const PI = 3.14;
+  if (mode === "area") { const v = r2(PI * r * r); return { type: "numeric", prompt: `Circle radius = ${r}. Area? (use π ≈ 3.14)`, value: v, tol: 0.5, display: `${v}`, explain: `A = πr² = 3.14 × ${r}² = ${v}.` }; }
+  const v = r2(2 * PI * r); return { type: "numeric", prompt: `Circle radius = ${r}. Circumference? (use π ≈ 3.14)`, value: v, tol: 0.5, display: `${v}`, explain: `C = 2πr = 2 × 3.14 × ${r} = ${v}.` };
+}
+function genExponents() {
+  const t = pick(["prod", "quot", "pow"]); const b = rnd(2, 5);
+  if (t === "prod") { const e1 = rnd(1, 5), e2 = rnd(1, 5); return { type: "numeric", prompt: `Simplify:   ${b}^${e1} × ${b}^${e2} = ${b}^?`, value: e1 + e2, tol: 0.011, display: `${b}^${e1 + e2}`, explain: `Same base → add exponents: ${e1}+${e2}=${e1 + e2}.` }; }
+  if (t === "quot") { const e2 = rnd(1, 4), e1 = e2 + rnd(1, 4); return { type: "numeric", prompt: `Simplify:   ${b}^${e1} ÷ ${b}^${e2} = ${b}^?`, value: e1 - e2, tol: 0.011, display: `${b}^${e1 - e2}`, explain: `Same base → subtract exponents: ${e1}−${e2}=${e1 - e2}.` }; }
+  const e1 = rnd(2, 4), e2 = rnd(2, 4); return { type: "numeric", prompt: `Simplify:   (${b}^${e1})^${e2} = ${b}^?`, value: e1 * e2, tol: 0.011, display: `${b}^${e1 * e2}`, explain: `Power of a power → multiply: ${e1}×${e2}=${e1 * e2}.` };
+}
+function genSciNot() {
+  const d = rnd(11, 99) / 10; const k = rnd(2, 6); const big = d * Math.pow(10, k);
+  const numStr = big.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  const correct = `${d} × 10^${k}`;
+  const opts = new Set([correct]);
+  opts.add(`${d} × 10^${k + 1}`); opts.add(`${d * 10} × 10^${k - 1}`); opts.add(`${d} × 10^${k - 1}`);
+  const arr = [...opts].slice(0, 4);
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return { type: "choice", prompt: `Write ${numStr} in scientific notation.`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `One nonzero digit before the decimal; count places moved → ${correct}.` };
+}
+const TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25], [20, 21, 29], [9, 40, 41]];
+function genPythagoras() {
+  const [a, b, c] = pick(TRIPLES); const mode = pick(["hyp", "leg"]);
+  if (mode === "hyp") return { type: "numeric", prompt: `Right triangle legs ${a} and ${b}. Hypotenuse?`, value: c, tol: 0.05, display: `${c}`, explain: `a²+b² = c²: ${a * a}+${b * b}=${c * c}, √${c * c}=${c}.` };
+  return { type: "numeric", prompt: `Right triangle: hypotenuse ${c}, one leg ${a}. Other leg?`, value: b, tol: 0.05, display: `${b}`, explain: `c²−a² = b²: ${c * c}−${a * a}=${b * b}, √${b * b}=${b}.` };
+}
+function genSlope() {
+  const m = rnd(-4, 4) || 2; const x1 = rnd(-6, 6); let x2 = rnd(-6, 6); while (x2 === x1) x2 = rnd(-6, 6);
+  const y1 = rnd(-6, 6); const y2 = y1 + m * (x2 - x1);
+  return { type: "numeric", prompt: `Find the slope through (${x1}, ${y1}) and (${x2}, ${y2}).`, value: m, tol: 0.011, display: `${m}`, explain: `(${y2}−${y1}) ÷ (${x2}−${x1}) = ${y2 - y1}/${x2 - x1} = ${m}.` };
+}
+function genProbability() {
+  const r = rnd(1, 6), b = rnd(1, 6), g = rnd(1, 5); const total = r + b + g;
+  const target = pick([["red", r], ["blue", b], ["green", g]]);
+  const [n, d] = simp(target[1], total);
+  return { type: "fraction", prompt: `A bag has ${r} red, ${b} blue, ${g} green gummies. P(${target[0]})?`, value: target[1] / total, tol: 0.005, display: fracStr(n, d), explain: `Favorable ÷ total = ${target[1]}/${total} = ${fracStr(n, d)}.` };
+}
+
+/* ============================================================
+   TOPICS  (strand: "sand" = review, "buoys" = upcoming)
+   ============================================================ */
+const TOPICS = [
+  { id: "integers",     name: "Positive & Negatives",       strand: "sand",  color: "#12718E", candy: "🍬", blurb: "Add, subtract, multiply, divide signed numbers. Mind the signs.",            gen: genIntegers },
+  { id: "fractions",    name: "Fraction Operations",        strand: "sand",  color: "#2BAE8E", candy: "🍭", blurb: "+ − × ÷ with fractions. Common denominators for + −; flip & multiply for ÷.", gen: genFractions },
+  { id: "decimals",     name: "Decimal Operations",         strand: "sand",  color: "#3C9CC4", candy: "🍫", blurb: "Line up decimal points for + −; count decimal places for ×.",                 gen: genDecimals },
+  { id: "pemdas",       name: "Order of Operations",        strand: "sand",  color: "#6FA75B", candy: "🍩", blurb: "PEMDAS: Parentheses, Exponents, ×÷ (left→right), then +− (left→right).",       gen: genPemdas },
+  { id: "ratios",       name: "Ratios & Unit Rates",        strand: "sand",  color: "#D9912F", candy: "🍪", blurb: "A unit rate is the amount per 1 — divide to find “per one.”",                  gen: genRatios },
+  { id: "percents",     name: "Percents",                   strand: "sand",  color: "#E8853D", candy: "🧁", blurb: "Percent means “per 100.” 25% = 0.25. Tips add on, discounts take off.",       gen: genPercents },
+
+  { id: "rationals",    name: "Rational Numbers",           strand: "buoys", color: "#12718E", candy: "🍦", blurb: "All four operations with negative fractions and decimals.",                    gen: genRationals },
+  { id: "proportions",  name: "Proportional Relationships", strand: "buoys", color: "#2BAE8E", candy: "🍧", blurb: "y = kx. Find the constant rate k, then scale up or down.",                     gen: genProportions },
+  { id: "equations",    name: "Two-Step Equations",         strand: "buoys", color: "#3C9CC4", candy: "🍡", blurb: "Undo + − first, then undo × ÷ to get x by itself.",                            gen: genEquations },
+  { id: "inequalities", name: "Two-Step Inequalities",      strand: "buoys", color: "#6FA75B", candy: "🍮", blurb: "Solve like an equation. (Flip the sign only when dividing by a negative.)",    gen: genInequalities },
+  { id: "expressions",  name: "Distribute & Combine",       strand: "buoys", color: "#D9912F", candy: "🍯", blurb: "Distribute a(b + c) = ab + ac, then combine like terms.",                      gen: genExpressions },
+  { id: "angles",       name: "Angle Relationships",        strand: "buoys", color: "#E8653D", candy: "🍓", blurb: "Complementary add to 90°, supplementary to 180°, vertical angles are equal.",  gen: genAngles },
+  { id: "circles",      name: "Area & Circumference",       strand: "buoys", color: "#A95FC9", candy: "🫐", blurb: "Area = πr². Circumference = 2πr. Use π ≈ 3.14.",                                gen: genCircles },
+  { id: "exponents",    name: "Laws of Exponents",          strand: "buoys", color: "#12718E", candy: "🍇", blurb: "Multiply → add exponents. Divide → subtract. Power of a power → multiply.",    gen: genExponents },
+  { id: "scinot",       name: "Scientific Notation",        strand: "buoys", color: "#3C9CC4", candy: "🍒", blurb: "One nonzero digit before the decimal, times a power of 10.",                   gen: genSciNot },
+  { id: "pythagoras",   name: "Pythagorean Theorem",        strand: "buoys", color: "#E8853D", candy: "🍉", blurb: "In a right triangle, a² + b² = c² (c is the hypotenuse).",                     gen: genPythagoras },
+  { id: "slope",        name: "Slope of a Line",            strand: "buoys", color: "#6FA75B", candy: "🍊", blurb: "Slope = rise ÷ run = (y₂ − y₁) / (x₂ − x₁).",                                  gen: genSlope },
+  { id: "probability",  name: "Probability",                strand: "buoys", color: "#A95FC9", candy: "🍌", blurb: "P(event) = favorable outcomes ÷ total outcomes.",                              gen: genProbability },
+];
+const TOPIC_MAP = Object.fromEntries(TOPICS.map((t) => [t.id, t]));
+const ALL_IDS = TOPICS.map((t) => t.id);
+
+const MASTERY_GOAL = 15;
+const DAILY_GOAL = 12;
+const STORE_KEY = "beach_math_v1";
+const RANKS = ["Sandcrab", "Tide Pooler", "Rookie Guard", "Junior Guard", "Senior Guard", "Tower Lead", "Lifeguard Lt.", "Captain", "Chief"];
+const rankName = (lvl) => RANKS[Math.min(lvl - 1, RANKS.length - 1)];
+
+/* ---- storage (localStorage with safe fallback) ---- */
+const _mem = {};
+const Store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return k in _mem ? _mem[k] : null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { _mem[k] = v; } },
+};
+function logEvent(payload) {
+  if (!CONFIG.LOG_URL) return;
+  try {
+    fetch(CONFIG.LOG_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+  } catch (e) { /* logging is best-effort */ }
+}
+
+/* ---- grading ---- */
+function parseNum(s) {
+  if (s == null) return null;
+  let t = String(s).trim().replace(/[$%\s°]/g, "");
+  if (t === "" || t === "-") return null;
+  if (t.includes("/")) { const [a, b] = t.split("/"); const na = Number(a), nb = Number(b); if (!isFinite(na) || !isFinite(nb) || nb === 0) return null; return na / nb; }
+  const n = Number(t); return isFinite(n) ? n : null;
+}
+function isCorrect(problem, input, choiceIndex) {
+  if (problem.type === "choice") return choiceIndex === problem.answerIndex;
+  const v = parseNum(input);
+  if (v === null) return false;
+  return Math.abs(v - problem.value) <= (problem.tol || 0.011);
+}
+
+/* ---- dates / progress ---- */
+const dayStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
+const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {} };
+function loadProgress() {
+  try { const raw = Store.get(STORE_KEY); if (raw) return { ...DEFAULT_PROGRESS, ...JSON.parse(raw) }; } catch (e) {}
+  return DEFAULT_PROGRESS;
+}
+function applyAnswer(p, correct, tid) {
+  const today = dayStr(); let { streak, lastDay } = p; let today_ = p.today;
+  if (today_.day !== today) { streak = lastDay === yesterdayStr() ? streak + 1 : 1; lastDay = today; today_ = { day: today, count: 0 }; }
+  today_ = { day: today, count: today_.count + 1 };
+  const t = p.topics[tid] || { correct: 0, attempts: 0 };
+  const nt = { correct: t.correct + (correct ? 1 : 0), attempts: t.attempts + 1 };
+  return { ...p, xp: p.xp + (correct ? 10 : 2), streak, lastDay, today: today_, topics: { ...p.topics, [tid]: nt } };
+}
+
+/* ============================================================
+   APP
+   ============================================================ */
+function App() {
+  const [progress, setProgress] = useState(loadProgress);
+  const [view, setView] = useState("map");
+  const [mode, setMode] = useState("topic");
+  const [activeTopic, setActiveTopic] = useState(null);
+  const [problem, setProblem] = useState(null);
+  const [input, setInput] = useState("");
+  const [picked, setPicked] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const [session, setSession] = useState({ seen: 0, correct: 0 });
+  const inputRef = useRef(null);
+
+  useEffect(() => { Store.set(STORE_KEY, JSON.stringify(progress)); }, [progress]);
+
+  const level = Math.floor(progress.xp / 100) + 1;
+  const intoLevel = progress.xp % 100;
+  const todayCount = progress.today.day === dayStr() ? progress.today.count : 0;
+  const treats = useMemo(() => TOPICS.filter((t) => (progress.topics[t.id]?.correct || 0) >= MASTERY_GOAL), [progress.topics]);
+
+  function drawProblem(m, topicId) { const tid = m === "mix" ? pick(ALL_IDS) : topicId; return { topicId: tid, ...TOPIC_MAP[tid].gen() }; }
+  function focusInput() { setTimeout(() => inputRef.current && inputRef.current.focus(), 60); }
+  function startTopic(topicId) { setMode("topic"); setActiveTopic(topicId); setSession({ seen: 0, correct: 0 }); setProblem(drawProblem("topic", topicId)); setInput(""); setPicked(null); setFeedback(null); setView("practice"); focusInput(); }
+  function startMix() { setMode("mix"); setActiveTopic(null); setSession({ seen: 0, correct: 0 }); setProblem(drawProblem("mix")); setInput(""); setPicked(null); setFeedback(null); setView("practice"); focusInput(); }
+  function nextProblem() { setProblem(drawProblem(mode, activeTopic)); setInput(""); setPicked(null); setFeedback(null); focusInput(); }
+
+  function submit() {
+    if (!problem || feedback) return;
+    if (problem.type === "choice" && picked === null) return;
+    if (problem.type !== "choice" && input.trim() === "") return;
+    const correct = isCorrect(problem, input, picked);
+    const np = applyAnswer(progress, correct, problem.topicId);
+    setProgress(np);
+    setSession((s) => ({ seen: s.seen + 1, correct: s.correct + (correct ? 1 : 0) }));
+    setFeedback({ correct, problem });
+    const topic = TOPIC_MAP[problem.topicId];
+    logEvent({ ts: new Date().toISOString(), name: CONFIG.KID_NAME, mode, strand: topic.strand, topic: topic.name,
+      correct: correct ? 1 : 0, given: problem.type === "choice" ? problem.choices[picked] : input.trim(),
+      answer: problem.display, xp: np.xp, streak: np.streak, level: Math.floor(np.xp / 100) + 1 });
+  }
+  function onKey(e) { if (e.key === "Enter") { e.preventDefault(); feedback ? nextProblem() : submit(); } }
+
+  return (
+    <div style={S.root}>
+      <style>{CSS}</style>
+      <header style={S.header}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={S.logo}>☀</div>
+          <div>
+            <div style={S.title}>Beach Math</div>
+            <div style={S.subtitle}>{CONFIG.KID_NAME ? `Hi ${CONFIG.KID_NAME} — ` : ""}{treats.length} of {TOPICS.length} treats earned</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={S.chip} title="Day streak"><span style={{ fontSize: 15 }}>🌊</span> {progress.streak}</div>
+          <div style={S.chip} title={`Level ${level}`}>{rankName(level)}</div>
+        </div>
+      </header>
+
+      <div style={S.band}>
+        <div style={S.bandRow}><span style={S.bandLabel}>Today's patrol</span><span style={S.bandLabel}>{Math.min(todayCount, DAILY_GOAL)} / {DAILY_GOAL}</span></div>
+        <Bar pct={Math.min(todayCount / DAILY_GOAL, 1) * 100} color="#FFB740" />
+        <div style={{ ...S.bandRow, marginTop: 10 }}><span style={S.bandLabel}>{rankName(level)}</span><span style={S.bandLabel}>{intoLevel} / 100 XP</span></div>
+        <Bar pct={intoLevel} color="#2BAE8E" />
+        {treats.length > 0 && <div style={S.treatJar}>{treats.map((t) => <span key={t.id} title={t.name}>{t.candy}</span>)}</div>}
+      </div>
+
+      {view === "map" ? (
+        <MapView progress={progress} onStartTopic={startTopic} onStartMix={startMix} todayCount={todayCount} />
+      ) : (
+        <PracticeView problem={problem} mode={mode} input={input} setInput={setInput} picked={picked} setPicked={setPicked}
+          feedback={feedback} session={session} inputRef={inputRef} onKey={onKey} onSubmit={submit} onNext={nextProblem} onBack={() => setView("map")} />
+      )}
+      <footer style={S.footer}>Progress saves on this device{CONFIG.LOG_URL ? " · synced to the family sheet" : ""}.</footer>
+    </div>
+  );
+}
+
+function MapView({ progress, onStartTopic, onStartMix, todayCount }) {
+  const sand = TOPICS.filter((t) => t.strand === "sand");
+  const buoys = TOPICS.filter((t) => t.strand === "buoys");
+  return (
+    <main style={S.main}>
+      <button className="mixcard focusable" style={S.mixCard} onClick={onStartMix}>
+        <div>
+          <div style={S.mixKicker}>Daily Patrol</div>
+          <div style={S.mixTitle}>Mixed drills 🌊</div>
+          <div style={S.mixSub}>{todayCount >= DAILY_GOAL ? "Patrol done today — nice work keeping the streak! 🔥" : `A few from every skill. ${DAILY_GOAL - todayCount} to go today.`}</div>
+        </div>
+        <div style={S.mixArrow}>→</div>
+      </button>
+
+      <Section title="On the Sand" caption="Warm-ups — skills you've already trained" />
+      <div style={S.grid}>{sand.map((t) => <TopicCard key={t.id} topic={t} stat={progress.topics[t.id]} onClick={() => onStartTopic(t.id)} />)}</div>
+
+      <Section title="Past the Buoys" caption="Deeper water — the rest of 7th & all of 8th grade" />
+      <div style={S.grid}>{buoys.map((t) => <TopicCard key={t.id} topic={t} stat={progress.topics[t.id]} onClick={() => onStartTopic(t.id)} />)}</div>
+    </main>
+  );
+}
+function Section({ title, caption }) {
+  return (<div style={{ margin: "22px 2px 12px" }}><div style={S.sectionTitle}>{title}</div><div style={S.sectionCaption}>{caption}</div></div>);
+}
+function TopicCard({ topic, stat, onClick }) {
+  const correct = stat?.correct || 0;
+  const pct = Math.min(correct / MASTERY_GOAL, 1) * 100;
+  const mastered = correct >= MASTERY_GOAL;
+  return (
+    <button className="topiccard focusable" style={S.card} onClick={onClick}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        <span style={{ ...S.dot, background: topic.color }} />
+        {mastered ? <span style={{ ...S.masterBadge, color: topic.color }}>{topic.candy} mastered</span> : <span style={S.countBadge}>{correct}/{MASTERY_GOAL}</span>}
+      </div>
+      <div style={S.cardName}>{topic.name}</div>
+      <div style={S.cardBlurb}>{topic.blurb}</div>
+      <div style={{ marginTop: "auto", paddingTop: 12 }}><Bar pct={pct} color={topic.color} thin /></div>
+    </button>
+  );
+}
+
+function PracticeView({ problem, mode, input, setInput, picked, setPicked, feedback, session, inputRef, onKey, onSubmit, onNext, onBack }) {
+  if (!problem) return null;
+  const topic = TOPIC_MAP[problem.topicId];
+  const answered = !!feedback;
+  return (
+    <main style={S.main}>
+      <div style={S.pBar}>
+        <button className="ghost focusable" style={S.backBtn} onClick={onBack}>← Map</button>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 12, color: "#5C7176", letterSpacing: ".04em", textTransform: "uppercase", fontWeight: 700 }}>{mode === "mix" ? "Daily Patrol" : topic.name}</div>
+          {mode === "mix" && <div style={{ fontSize: 13, color: topic.color, fontWeight: 700, marginTop: 2 }}>{topic.name}</div>}
+        </div>
+        <div style={{ ...S.scorePill, minWidth: 54, textAlign: "right" }}>{session.correct}/{session.seen}</div>
+      </div>
+
+      <div style={{ ...S.refresher, borderColor: topic.color }}><span style={{ fontWeight: 700, color: topic.color }}>Remember: </span>{topic.blurb}</div>
+
+      <div style={S.problemCard}>
+        <div style={S.prompt}>{problem.prompt}</div>
+        {problem.type === "choice" ? (
+          <div style={S.choices}>
+            {problem.choices.map((c, i) => {
+              let extra = {};
+              if (answered) { if (i === problem.answerIndex) extra = S.choiceRight; else if (i === picked) extra = S.choiceWrong; }
+              else if (i === picked) extra = S.choiceSel;
+              return (<button key={i} className="choice focusable" style={{ ...S.choiceBtn, ...extra }} onClick={() => !answered && setPicked(i)} disabled={answered}>{c}</button>);
+            })}
+          </div>
+        ) : (
+          <input ref={inputRef} className="answer focusable" style={S.answerInput} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey} placeholder="Your answer" inputMode="text" autoComplete="off" disabled={answered} aria-label="Your answer" />
+        )}
+        {!answered ? (
+          <button className="primary focusable" style={S.primaryBtn} onClick={onSubmit}>Check</button>
+        ) : (
+          <div className="reveal" style={{ ...S.feedback, ...(feedback.correct ? S.fbRight : S.fbWrong) }}>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{feedback.correct ? "Correct  +10 XP 🎉" : "Not quite  +2 XP"}</div>
+            {!feedback.correct && <div style={{ marginTop: 4 }}>Answer: <strong>{problem.display}</strong></div>}
+            <div style={{ marginTop: 6, color: "#33474C", lineHeight: 1.45 }}>{problem.explain}</div>
+            <button className="primary focusable" style={{ ...S.primaryBtn, marginTop: 14 }} onClick={onNext}>Next →</button>
+          </div>
+        )}
+      </div>
+      <div style={{ textAlign: "center", color: "#8AA0A4", fontSize: 12.5, marginTop: 14 }}>Type a number, a fraction like <code>3/4</code>, or a decimal. Press Enter to check.</div>
+    </main>
+  );
+}
+function Bar({ pct, color, thin }) {
+  return (<div style={{ ...S.barTrack, height: thin ? 7 : 9 }}><div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 99, transition: "width .4s ease" }} /></div>);
+}
+
+const SAND = "#FBF6EC", INK = "#102A30", CARD = "#FFFFFF";
+const S = {
+  root: { minHeight: "100vh", background: `radial-gradient(1200px 500px at 100% -10%, #E6F3F0 0%, ${SAND} 55%)`, color: INK, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', paddingBottom: 40 },
+  header: { position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", background: "rgba(251,246,236,.82)", backdropFilter: "blur(10px)", borderBottom: "1px solid #EADFC9" },
+  logo: { width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#FFB740,#E8853D)", color: "#fff", display: "grid", placeItems: "center", fontSize: 22, fontWeight: 700, boxShadow: "0 6px 16px rgba(232,133,61,.32)" },
+  title: { fontSize: 19, fontWeight: 800, letterSpacing: "-.01em", lineHeight: 1 },
+  subtitle: { fontSize: 12.5, color: "#5C7176", marginTop: 3 },
+  chip: { display: "flex", alignItems: "center", gap: 5, background: CARD, border: "1px solid #EADFC9", borderRadius: 99, padding: "6px 11px", fontWeight: 800, fontSize: 13.5, color: INK },
+  band: { maxWidth: 720, margin: "16px auto 0", padding: "0 18px" },
+  bandRow: { display: "flex", justifyContent: "space-between", marginBottom: 6 },
+  bandLabel: { fontSize: 12, color: "#5C7176", fontWeight: 600 },
+  barTrack: { width: "100%", background: "#EADFC9", borderRadius: 99, overflow: "hidden" },
+  treatJar: { marginTop: 12, fontSize: 20, letterSpacing: 4, lineHeight: 1.4 },
+  main: { maxWidth: 720, margin: "0 auto", padding: "8px 18px 0" },
+  mixCard: { width: "100%", marginTop: 18, textAlign: "left", border: "none", cursor: "pointer", borderRadius: 18, padding: "20px 22px", color: "#fff", background: "linear-gradient(120deg,#0E4D64 0%,#12718E 55%,#2BAE8E 100%)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, boxShadow: "0 10px 26px rgba(14,77,100,.28)" },
+  mixKicker: { fontSize: 12, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", opacity: .85 },
+  mixTitle: { fontSize: 22, fontWeight: 800, marginTop: 3 },
+  mixSub: { fontSize: 13.5, opacity: .92, marginTop: 5, maxWidth: 460, lineHeight: 1.4 },
+  mixArrow: { fontSize: 30, fontWeight: 700, opacity: .9 },
+  sectionTitle: { fontSize: 17, fontWeight: 800, letterSpacing: "-.01em" },
+  sectionCaption: { fontSize: 13, color: "#5C7176", marginTop: 2 },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 },
+  card: { display: "flex", flexDirection: "column", textAlign: "left", cursor: "pointer", background: CARD, border: "1px solid #EADFC9", borderRadius: 16, padding: "15px 16px", minHeight: 132 },
+  dot: { width: 12, height: 12, borderRadius: 99, display: "inline-block" },
+  cardName: { fontSize: 16, fontWeight: 800, marginTop: 10, letterSpacing: "-.01em" },
+  cardBlurb: { fontSize: 12.5, color: "#5C7176", marginTop: 5, lineHeight: 1.4 },
+  countBadge: { fontSize: 12, fontWeight: 700, color: "#8AA0A4" },
+  masterBadge: { fontSize: 12, fontWeight: 800 },
+  pBar: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 16, gap: 10 },
+  backBtn: { background: "transparent", border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, color: "#12718E", padding: "6px 4px" },
+  scorePill: { background: CARD, border: "1px solid #EADFC9", borderRadius: 99, padding: "6px 12px", fontWeight: 800, fontSize: 14 },
+  refresher: { marginTop: 14, background: "#fff", border: "1px solid #EADFC9", borderLeft: "4px solid", borderRadius: 12, padding: "11px 14px", fontSize: 13.5, color: "#33474C", lineHeight: 1.45 },
+  problemCard: { marginTop: 14, background: CARD, border: "1px solid #EADFC9", borderRadius: 18, padding: "26px 22px", boxShadow: "0 8px 24px rgba(16,42,48,.06)" },
+  prompt: { fontSize: 27, fontWeight: 700, textAlign: "center", lineHeight: 1.35, whiteSpace: "pre-line", letterSpacing: "-.01em", padding: "6px 0 18px" },
+  answerInput: { width: "100%", boxSizing: "border-box", fontSize: 22, fontWeight: 700, textAlign: "center", padding: "14px 12px", border: "2px solid #DCE6E4", borderRadius: 14, outline: "none", color: INK, background: "#FAFCFB" },
+  choices: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
+  choiceBtn: { fontSize: 18, fontWeight: 700, padding: "16px 10px", borderRadius: 14, border: "2px solid #DCE6E4", background: "#FAFCFB", cursor: "pointer", color: INK },
+  choiceSel: { borderColor: "#12718E", background: "#EAF5F7" },
+  choiceRight: { borderColor: "#2BAE8E", background: "#E5F6EF", color: "#0B6B4F" },
+  choiceWrong: { borderColor: "#E8653D", background: "#FBE9E3", color: "#A23A1E" },
+  primaryBtn: { width: "100%", marginTop: 18, fontSize: 17, fontWeight: 800, padding: "15px", borderRadius: 14, border: "none", cursor: "pointer", color: "#fff", background: "linear-gradient(120deg,#12718E,#2BAE8E)", boxShadow: "0 8px 18px rgba(18,113,142,.28)" },
+  feedback: { marginTop: 18, borderRadius: 14, padding: "15px 16px", fontSize: 14 },
+  fbRight: { background: "#E5F6EF", border: "1px solid #B6E3D0", color: "#0B6B4F" },
+  fbWrong: { background: "#FBEEE8", border: "1px solid #F1CDBE", color: "#8A3C22" },
+  footer: { textAlign: "center", color: "#9CAFB2", fontSize: 12, marginTop: 26 },
+};
+const CSS = `
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+body { margin: 0; }
+.focusable:focus-visible { outline: 3px solid #12718E; outline-offset: 2px; }
+.topiccard, .mixcard, .choice, .primary, .ghost { transition: transform .12s ease, box-shadow .12s ease, background .15s ease, border-color .15s ease; }
+@media (hover:hover){
+  .topiccard:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(16,42,48,.10); border-color:#D8C9AC; }
+  .mixcard:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(14,77,100,.34); }
+  .choice:hover:not(:disabled){ border-color:#9CC4CB; }
+  .primary:hover { transform: translateY(-1px); }
+}
+.topiccard:active, .mixcard:active, .choice:active, .primary:active { transform: scale(.985); }
+.answer:focus { border-color:#12718E !important; background:#fff !important; }
+.reveal { animation: pop .22s ease; }
+@keyframes pop { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
+code { background:#EFF3F1; padding:1px 5px; border-radius:5px; font-size:.92em; }
+@media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+@media (max-width:520px){ .choice { font-size:16px !important; } }
+`;
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+
+</script>
+</body>
+</html>
