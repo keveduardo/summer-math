@@ -1,0 +1,18 @@
+{
+  // The Worker name must match the name you give it in the Cloudflare dashboard.
+  "name": "summer-math",
+  "main": "src/index.js",
+  "compatibility_date": "2025-06-01",
+
+  // Serves the static site (public/index.html) and exposes it to the Worker as env.ASSETS
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  // Cross-device progress storage.
+  // Create a KV namespace in the dashboard, then paste its ID below.
+  "kv_namespaces": [
+    { "binding": "BEACH_MATH_KV", "id": "PASTE_KV_NAMESPACE_ID_HERE" }
+  ]
+}
