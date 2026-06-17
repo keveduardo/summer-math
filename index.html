@@ -1,642 +1,3078 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#FBF6EC" />
-<title>Beach Math</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>\u2600</text></svg>" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 FIFA World Cup Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Dancing+Script:wght@600&display=swap');
+
+  :root {
+    --pitch: #0a5c36;
+    --pitch-light: #0e7a4a;
+    --gold: #f5c518;
+    --white: #f8f9f4;
+    --off-white: #edf0e8;
+    --text: #1a1f14;
+    --muted: #6b7560;
+    --card-bg: #ffffff;
+    --border: #d8ddd0;
+    --live-red: #e63946;
+    --upcoming: #2a6db5;
+    --done: #8a9580;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--off-white);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--pitch);
+    background-image: repeating-linear-gradient(90deg,transparent,transparent 48px,rgba(255,255,255,0.03) 48px,rgba(255,255,255,0.03) 50px),
+      repeating-linear-gradient(0deg,transparent,transparent 48px,rgba(255,255,255,0.03) 48px,rgba(255,255,255,0.03) 50px);
+    padding: 20px 16px 16px;
+    position: relative;
+    z-index: 100;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  .header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  /* keeps the Pool pill tucked immediately to the left of the clock */
+  .header-right-group { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
+  /* Pool call-to-action pill — sits just left of the clock */
+  .pool-nav {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+    color: #073d24; background: var(--gold);
+    border: none; border-radius: 999px; padding: 6px 11px;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .pool-nav:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .pool-nav .nv-new {
+    font-size: 8px; font-weight: 800; letter-spacing: 0.5px;
+    background: #073d24; color: var(--gold);
+    padding: 1px 5px; border-radius: 999px;
+  }
+  @media (max-width: 600px) {
+    .pool-nav { font-size: 11px; padding: 5px 8px; }
+  }
+
+  .header-title { display: flex; flex-direction: column; }
+
+  .eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 800;
+    color: var(--white); line-height: 1;
+  }
+
+  .byline {
+    font-family: 'Dancing Script', cursive;
+    font-size: 16px; font-weight: 600;
+    color: var(--gold);
+    margin-top: 2px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+  .live-clock {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px; padding: 6px 10px; text-align: right;
+  }
+
+  .live-clock .time {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 700; color: var(--white); line-height: 1;
+  }
+
+  .live-clock .tz { font-size: 10px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; }
+
+  .api-status {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 2px 7px; border-radius: 10px;
+    background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.6);
+  }
+  .api-status.ok { background: rgba(10,200,80,0.25); color: #6effa0; }
+  .api-status.err { background: rgba(230,57,70,0.3); color: #ffaaaa; }
+
+  .tab-bar {
+    background: #073d24;
+    border-bottom: 3px solid var(--gold);
+    overflow-x: auto; scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 99;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+
+  .tabs {
+    display: flex; max-width: 900px;
+    margin: 0 auto; padding: 0 8px; gap: 2px;
+  }
+
+  .tab {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    padding: 12px 16px; border: none; background: none;
+    cursor: pointer; white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab.active, .tab:hover { color: var(--gold); border-bottom-color: var(--gold); }
+
+  main { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .section-head {
+    display: flex; align-items: baseline;
+    gap: 10px; margin-bottom: 12px; margin-top: 24px;
+  }
+  .section-head:first-child { margin-top: 0; }
+
+  .section-head h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .section-head .count { font-size: 12px; color: var(--muted); }
+
+  .match-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; gap: 10px;
+    position: relative; overflow: hidden;
+  }
+
+  .match-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 4px;
+  }
+
+  .match-card.live::before { background: var(--live-red); }
+  .match-card.upcoming::before { background: var(--upcoming); }
+  .match-card.completed::before { background: var(--done); }
+
+  .match-card.live {
+    border-color: rgba(230,57,70,0.3);
+    background: #fff8f8;
+  }
+
+  .team-block { display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+  .team-block:active { opacity: 0.6; }
+  .team-block.right { text-align: right; align-items: flex-end; }
+
+  .team-flag { font-size: 22px; line-height: 1; }
+
+  .flag-img {
+    height: 1em; width: auto;
+    vertical-align: -0.12em;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+  }
+
+  .team-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 0.3px; line-height: 1.2;
+  }
+
+  .match-center {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px; min-width: 72px;
+  }
+
+  .score-display {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px; font-weight: 800;
+    line-height: 1; color: var(--text); letter-spacing: 2px;
+  }
+
+  .vs-display {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 600;
+    color: var(--muted); letter-spacing: 1px;
+  }
+
+  .match-time { font-size: 12px; font-weight: 600; color: var(--upcoming); white-space: nowrap; }
+  .match-time.done { color: var(--done); }
+
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--live-red); color: white;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 7px; border-radius: 4px;
+  }
+
+  .live-dot {
+    width: 6px; height: 6px; background: white;
+    border-radius: 50%; animation: pulse 1.2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .match-meta { font-size: 11px; color: var(--muted); text-align: center; margin-top: 2px; }
+
+  .match-wx {
+    font-size: 11px; font-weight: 600;
+    color: var(--upcoming); text-align: center; margin-top: 3px;
+  }
+  body.dark .match-wx { color: #6db3ff; }
+
+  .group-tag {
+    display: inline-block;
+    background: var(--pitch); color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .group-tag.clickable { cursor: pointer; }
+  .group-tag.clickable:active { opacity: 0.7; }
+
+  .date-divider {
+    display: flex; align-items: center;
+    gap: 10px; margin: 20px 0 10px;
+  }
+
+  .date-divider .date-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); white-space: nowrap;
+  }
+
+  .date-divider.today .date-label { color: var(--pitch); }
+
+  .date-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .today-pill {
+    background: var(--pitch); color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 10px;
+  }
+
+  .group-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; margin-bottom: 16px;
+  }
+
+  .group-header {
+    background: var(--pitch); padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .group-letter {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px; font-weight: 800; color: var(--gold);
+    line-height: 1; min-width: 24px;
+  }
+
+  .group-teams-preview {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: rgba(255,255,255,0.7); letter-spacing: 0.3px;
+    flex: 1;
+  }
+
+  .group-strength {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700;
+    color: var(--gold); background: rgba(0,0,0,0.2);
+    padding: 2px 7px; border-radius: 10px; white-space: nowrap;
+  }
+
+  .standings-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+  .standings-table thead tr {
+    background: #f3f5ef; border-bottom: 1px solid var(--border);
+  }
+
+  .standings-table th {
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); padding: 7px 2px; text-align: center;
+  }
+
+  .standings-table th:first-child { text-align: left; padding-left: 10px; }
+  /* Stat columns get a fixed narrow width; team column takes the rest */
+  .standings-table th:not(:first-child), .standings-table td:not(:first-child) { width: 30px; }
+  .standings-table th:nth-child(2), .standings-table td:nth-child(2) { width: auto; }
+
+  .standings-table td {
+    padding: 9px 2px; text-align: center;
+    font-size: 13px; border-bottom: 1px solid #f0f2ec;
+  }
+
+  .standings-table td:first-child { text-align: left; padding-left: 10px; width: 26px; }
+  .standings-table tbody tr:last-child td { border-bottom: none; }
+  .standings-table tbody tr.qualify-1 { background: rgba(10,92,54,0.07); }
+  .standings-table tbody tr.qualify-2 { background: rgba(10,92,54,0.03); }
+
+  .rank-num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 800; color: var(--muted);
+    width: 16px; display: inline-block;
+  }
+
+  .rank-num.q1 { color: var(--pitch); }
+  .rank-num.q2 { color: #0e7a4a; }
+
+  .team-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .team-row-flag { font-size: 16px; flex-shrink: 0; }
+  .team-row-name {
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .pts {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 800; color: var(--text);
+  }
+
+  .clinch-badge {
+    display: inline-block;
+    background: var(--pitch); color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 1px 5px; border-radius: 3px;
+    margin-left: 5px; vertical-align: middle;
+  }
+  .clinch-badge.first { background: var(--gold); color: var(--pitch); }
+
+  .qualify-note {
+    padding: 6px 14px; font-size: 11px; color: var(--muted);
+    background: #f8faf4; border-top: 1px solid var(--border);
+    display: flex; gap: 14px;
+  }
+
+  .groups-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+
+  .next-up-banner {
+    background: var(--pitch); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px; color: var(--white);
+    flex-wrap: wrap;
+  }
+
+  .next-up-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gold); white-space: nowrap;
+  }
+
+  .next-up-game {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 700; flex: 1;
+  }
+
+  .next-up-time {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--gold); white-space: nowrap;
+  }
+
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  .today-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .today-bar:empty { display: none; }
+
+  .collapse-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--pitch); color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 11px 14px; border-radius: 10px;
+    margin: 16px 0 10px; cursor: pointer;
+    border: 1px solid var(--gold);
+  }
+  .collapse-header:active { opacity: 0.8; }
+  .collapse-meta {
+    font-size: 12px; color: rgba(255,255,255,0.7);
+    letter-spacing: 0; text-transform: none;
+  }
+
+  .today-count {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.3px;
+    color: var(--pitch);
+  }
+  body.dark .today-count { color: var(--gold); }
+
+  .jump-today-btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--pitch); color: var(--gold);
+    border: none; border-radius: 20px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  .jump-today-btn:active { opacity: 0.7; }
+
+  .filter-btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; background: white;
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 5px 12px; cursor: pointer; color: var(--text);
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--pitch); color: var(--gold); border-color: var(--pitch);
+  }
+
+  .loading-spinner {
+    text-align: center; padding: 40px 20px; color: var(--muted);
+    font-size: 14px;
+  }
+
+  .error-banner {
+    background: #fff3f3; border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+    font-size: 13px; color: var(--live-red);
+  }
+
+  .last-updated {
+    text-align: center; font-size: 11px; color: var(--muted);
+    padding: 12px 0 4px;
+  }
+
+  .scroll-top {
+    display: none; position: fixed; bottom: 20px; right: 16px;
+    background: var(--pitch); color: var(--gold); border: none;
+    border-radius: 50%; width: 40px; height: 40px; font-size: 20px;
+    cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 50;
+    align-items: center; justify-content: center;
+  }
+
+  @media (max-width: 600px) {
+    .groups-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+    .score-display { font-size: 22px; }
+  }
+
+  /* ── TEAM DETAIL MODAL ── */
+  .team-name, .team-row-name { cursor: pointer; }
+  .team-name:active, .team-row-name:active { opacity: 0.6; }
+
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,20,12,0.6);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .team-modal {
+    background: var(--off-white);
+    width: 100%; max-width: 700px;
+    max-height: 85vh;
+    border-radius: 16px 16px 0 0;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  .team-modal-header {
+    background: var(--pitch);
+    padding: 16px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 5;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  .team-modal-flag { font-size: 34px; line-height: 1; }
+
+  .team-modal-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px; font-weight: 800; color: var(--white);
+    flex: 1; line-height: 1;
+  }
+
+  .team-modal-group {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    color: var(--gold); text-transform: uppercase;
+  }
+
+  .team-modal-rank {
+    font-size: 11px; font-weight: 600;
+    color: rgba(255,255,255,0.75); margin-top: 1px;
+  }
+
+  .rank-chip {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); margin-left: 3px; flex-shrink: 0;
+  }
+
+  .modal-close {
+    background: rgba(255,255,255,0.15);
+    border: none; color: var(--white);
+    width: 32px; height: 32px; border-radius: 50%;
+    font-size: 18px; cursor: pointer; line-height: 1;
+  }
+
+  .team-modal-body { padding: 14px 16px 30px; }
+
+  .team-record-bar {
+    display: flex; gap: 8px; margin-bottom: 12px;
+  }
+
+  .roster-link {
+    display: block; text-align: center;
+    background: var(--pitch); color: var(--gold);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+    padding: 11px; border-radius: 10px;
+    text-decoration: none; margin-bottom: 16px;
+    border: 1px solid var(--gold);
+  }
+  .roster-link:active { opacity: 0.7; }
+
+  /* ── MATCH DETAIL ── */
+  .event-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 4px; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .event-clock {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; color: var(--muted);
+    min-width: 32px; font-size: 14px;
+  }
+  .event-icon { font-size: 15px; }
+  .event-detail { flex: 1; }
+
+  .stat-head {
+    display: flex; justify-content: space-between;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; padding: 4px 0;
+  }
+  .stat-row {
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: center; padding: 7px 0;
+    border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .stat-h { text-align: left; font-weight: 700; }
+  .stat-a { text-align: right; font-weight: 700; }
+  .stat-label { color: var(--muted); font-size: 11px; padding: 0 12px; }
+
+  .lineup { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .lineup-player {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; font-size: 12px;
+  }
+  .lp-pos {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; color: var(--gold);
+    background: var(--pitch); border-radius: 3px;
+    padding: 0 4px; font-size: 10px; margin-right: 4px;
+  }
+
+  .detail-btn {
+    display: block; width: 100%; text-align: center;
+    background: var(--live-red); color: white;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: none; border-radius: 6px;
+    padding: 6px; margin-top: 6px; cursor: pointer;
+  }
+  .detail-btn.done { background: var(--done); }
+  .detail-btn:active { opacity: 0.8; }
+
+  .team-form {
+    font-size: 9px; letter-spacing: 1px; margin-top: 1px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+  }
+  .form-w { color: #1a9d4e; } .form-d { color: #b0922a; } .form-l { color: var(--live-red); }
+
+  .card-rank {
+    font-size: 10px; font-weight: 600;
+    color: var(--muted); margin-top: 1px;
+  }
+
+  .broadcast-tag {
+    font-size: 10px; color: var(--muted); margin-top: 2px;
+  }
+
+  .attendance-tag {
+    font-size: 10px; color: var(--muted); margin-top: 2px;
+  }
+
+  .record-chip {
+    flex: 1;
+    background: white; border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 4px;
+    text-align: center;
+  }
+
+  .record-chip .num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 800; line-height: 1;
+  }
+
+  .record-chip .lbl {
+    font-size: 9px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); margin-top: 2px;
+  }
+
+  /* ── FAVORITES ── */
+  .fav-star { color: var(--gold); font-size: 12px; }
+
+  .fav-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--gold); font-size: 18px;
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer; line-height: 1;
+  }
+
+  .my-teams-section {
+    background: linear-gradient(135deg, #0a5c36, #073d24);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+    border: 1px solid var(--gold);
+  }
+
+  .my-teams-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+  }
+
+  .my-team-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 0; color: var(--white);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    font-size: 13px; cursor: pointer;
+  }
+  .my-team-row:last-child { border-bottom: none; }
+
+  .my-team-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700; font-size: 15px; min-width: 90px;
+  }
+
+  .my-team-next { flex: 1; color: rgba(255,255,255,0.75); font-size: 12px; }
+  .my-team-time { color: var(--gold); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+  .sync-btn {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; background: white;
+    border: 1px dashed var(--pitch); border-radius: 20px;
+    padding: 5px 12px; cursor: pointer; color: var(--pitch);
+  }
+
+  /* ── THIRD PLACE TRACKER ── */
+  .third-place-card { grid-column: 1 / -1; }
+
+  .third-place-card .group-header { background: #073d24; }
+
+  .tp-status { font-size: 13px; }
+
+  /* ── COUNTDOWN ── */
+  .next-up-countdown {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: rgba(255,255,255,0.8); width: 100%;
+  }
+
+  /* ── TEAMS TAB ── */
+  .teams-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (min-width: 600px) {
+    .teams-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+
+  .team-tile {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .team-tile:active { border-color: var(--pitch); }
+
+  .team-tile .flag-img { height: 22px; }
+
+  .team-tile-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px; font-weight: 700;
+    flex: 1; line-height: 1.15;
+  }
+
+  .team-tile-grp {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--muted); letter-spacing: 1px;
+  }
+
+  .tile-star {
+    background: none; border: none;
+    font-size: 20px; line-height: 1;
+    color: var(--border); cursor: pointer;
+    padding: 4px; margin: -4px;
+  }
+
+  .tile-star.on { color: var(--gold); }
+
+  .teams-search {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    margin-bottom: 12px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+
+  /* ── INFO BUTTON & GUIDE ── */
+  .info-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--gold);
+    width: 26px; height: 26px; border-radius: 50%;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; line-height: 1;
+    font-family: Georgia, serif; font-style: italic;
+  }
+
+  .guide-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+
+  .guide-icon { font-size: 22px; line-height: 1.2; }
+
+  .guide-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .guide-text { font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  /* ── DARK MODE ── */
+  body.dark {
+    --off-white: #131a14;
+    --card-bg: #1b231c;
+    --text: #e6ebe2;
+    --muted: #93a08c;
+    --border: #2b352c;
+  }
+  body.dark .standings-table thead tr { background: #212b22; }
+  body.dark .standings-table td { border-bottom: 1px solid #242e25; }
+  body.dark .qualify-note { background: #19211a; border-top-color: var(--border); }
+  body.dark .match-card.live { background: #2b1d1e; }
+  body.dark .filter-btn { background: #1b231c; color: var(--text); border-color: var(--border); }
+  body.dark .filter-btn.active, body.dark .filter-btn:hover { background: var(--pitch); color: var(--gold); }
+  body.dark .sync-btn { background: #1b231c; }
+  body.dark .record-chip { background: #1b231c; border-color: var(--border); }
+  body.dark .standings-table tbody tr.qualify-1 { background: rgba(245,197,24,0.08); }
+  body.dark .standings-table tbody tr.qualify-2 { background: rgba(245,197,24,0.04); }
+
+
+  /* ── PREDICTION POOL ── */
+  .pool-join { max-width: 520px; margin: 0 auto; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .pool-join h3 { font-family: 'Barlow Condensed',sans-serif; font-size: 26px;
+    color: var(--pitch); text-transform: uppercase; letter-spacing: .5px; }
+  body.dark .pool-join h3 { color: var(--gold); }
+  .pool-join-sub { font-size: 14px; color: var(--muted); margin: 6px 0 16px; line-height: 1.5; }
+  .pool-field { display: block; margin-bottom: 12px; }
+  .pool-field > span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .pool-field > span small { font-weight: 400; color: var(--muted); }
+  .pool-field input { width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 15px; background: var(--off-white); color: var(--text); }
+  .pool-go, .pool-leave, .pool-mini-btn, .pool-st {
+    font-family: 'Inter',sans-serif; cursor: pointer; border: none; }
+  .pool-go { width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px;
+    background: var(--pitch); color: var(--gold); font-size: 15px; font-weight: 600; }
+  .pool-join-note { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+  .pool-link { color: var(--pitch); font-weight: 700; cursor: pointer; text-decoration: underline; }
+  body.dark .pool-link { color: var(--gold); }
+
+  .pool-hdr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 14px; }
+  .pool-hdr-l { display: flex; flex-direction: column; gap: 2px; }
+  .pool-you { font-weight: 700; }
+  .pool-code { font-size: 12px; color: var(--muted); }
+  .pool-code b { color: var(--text); }
+  .pool-subtabs { display: flex; gap: 6px; margin-left: auto; }
+  .pool-st { padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: var(--off-white); color: var(--text); border: 1px solid var(--border); }
+  .pool-st.active { background: var(--pitch); color: var(--gold); border-color: var(--pitch); }
+  .pool-leave, .pool-mini-btn { background: rgba(0,0,0,.06); color: var(--muted);
+    padding: 5px 10px; border-radius: 6px; font-size: 12px; }
+  body.dark .pool-leave, body.dark .pool-mini-btn { background: rgba(255,255,255,.08); }
+
+  .pool-champ { background: linear-gradient(135deg, var(--pitch), #073d24);
+    color: var(--white); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .pool-champ-label { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  .pool-champ-bonus { color: var(--gold); font-size: 13px; margin-left: 6px; }
+  .pool-select { width: 100%; padding: 10px; border-radius: 8px; border: none;
+    font-size: 15px; background: var(--white); color: var(--text); }
+  .pool-champ-locked { font-size: 16px; font-weight: 600; }
+  .pool-lock { font-size: 12px; color: var(--gold); margin-left: 8px; }
+  .pool-champ-res { margin-top: 8px; font-weight: 700; font-size: 14px; }
+  .pool-champ-res.correct { color: #6effa0; }
+  .pool-champ-res.wrong { color: #ffb3b3; }
+  .pool-hint { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .pool-champ .pool-hint { color: rgba(255,255,255,.7); }
+
+  .pool-round-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; }
+  .pool-round-head h2 { font-family: 'Barlow Condensed',sans-serif; font-size: 22px;
+    color: var(--pitch); text-transform: uppercase; }
+  body.dark .pool-round-head h2 { color: var(--gold); }
+  .pool-round-head .wt { font-size: 12px; color: var(--muted);
+    background: var(--off-white); padding: 2px 8px; border-radius: 999px; }
+
+  .pool-slot { background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .pool-slot.locked { opacity: .92; }
+  .pool-slot-top { display: flex; justify-content: space-between; font-size: 11px;
+    color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .3px; }
+  .pool-pair { display: flex; align-items: center; gap: 8px; }
+  .pool-vs { font-size: 11px; color: var(--muted); }
+  .pool-team { flex: 1; display: flex; align-items: center; gap: 8px; text-align: left;
+    padding: 9px 11px; border-radius: 8px; background: var(--off-white);
+    border: 2px solid transparent; font-size: 14px; color: var(--text); min-width: 0; }
+  .pool-team .pn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pool-team .pf { font-size: 17px; }
+  .pool-team:not(.locked):hover { border-color: var(--pitch-light); }
+  .pool-team.picked { background: var(--pitch); color: var(--white); border-color: var(--gold); font-weight: 600; }
+  .pool-team.picked.correct { background: #0e7a4a; border-color: #6effa0; }
+  .pool-team.picked.wrong { background: #7a2b2b; border-color: #ffb3b3; }
+  .pool-team.locked { cursor: default; }
+  .pool-team.tbd, .pool-tbd { color: var(--muted); font-style: italic; font-size: 13px;
+    flex: 1; padding: 9px 11px; text-align: center; }
+  .pool-team .rk { margin-left: auto; font-weight: 700; }
+  .pool-team .rk.ok { color: #6effa0; }
+  .pool-team .rk.no { color: #ffb3b3; }
+
+  .pool-board { background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; }
+  .pool-board-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .pool-board-head h3 { font-family: 'Barlow Condensed',sans-serif; font-size: 22px;
+    color: var(--pitch); text-transform: uppercase; }
+  body.dark .pool-board-head h3 { color: var(--gold); }
+  .pool-lb { width: 100%; border-collapse: collapse; }
+  .pool-lb th { text-align: left; font-size: 11px; text-transform: uppercase;
+    color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .pool-lb td { padding: 9px 8px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .pool-lb tr.me td { background: rgba(245,197,24,.12); font-weight: 600; }
+  .pool-lb .lb-pts { font-weight: 700; color: var(--pitch); }
+  body.dark .pool-lb .lb-pts { color: var(--gold); }
+  .pool-lb .lb-champ { font-size: 12px; }
+  .pool-empty { color: var(--muted); padding: 16px 0; text-align: center; }
+
+</style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useMemo } = React;
 
-/* ===== CONFIG — edit these two lines ===== */
-const CONFIG = {
-  KID_NAME: "",   // e.g. "Sofia" — shows a hello on the header; leave "" for none
-  LOG_URL: "https://script.google.com/macros/s/AKfycbyl-Onhr3T_bevzrIWt-s3T3XSXP2WxiK23qgEONal51PjGBJrn2C1HDbFCSbxalvVu/exec",   // logs to your Google Sheet
-};
-
-/* ===== Verified generators (600,000 tested, 0 errors) ===== */
-const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; };
-const simp = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1; return [n / g, d / g]; };
-const fracStr = (n, d) => (d === 1 ? `${n}` : `${n}/${d}`);
-const r1 = (x) => Math.round(x * 10) / 10;
-const r2 = (x) => Math.round(x * 100) / 100;
-
-/* ---- Unit 1: Fractions & Decimals ---- */
-function genFractions() {
-  const op = pick(["+", "−", "×", "÷"]);
-  let d1 = rnd(3, 10), d2 = rnd(3, 10), n1 = rnd(1, d1 - 1), n2 = rnd(1, d2 - 1);
-  if (op === "−" && n1 / d1 < n2 / d2) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
-  let rn, rd;
-  if (op === "+") { rn = n1 * d2 + n2 * d1; rd = d1 * d2; }
-  else if (op === "−") { rn = n1 * d2 - n2 * d1; rd = d1 * d2; }
-  else if (op === "×") { rn = n1 * n2; rd = d1 * d2; }
-  else { rn = n1 * d2; rd = d1 * n2; }
-  [rn, rd] = simp(rn, rd);
-  return { type: "fraction", prompt: `${n1}/${d1}   ${op}   ${n2}/${d2}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Common denominator (or multiply/flip for × ÷), then simplify → ${fracStr(rn, rd)}.` };
-}
-function genGcfLcm() {
-  const a = rnd(2, 16), b = rnd(2, 16);
-  if (pick(["gcf", "lcm"]) === "gcf") { const g = gcd(a, b); return { type: "numeric", prompt: `GCF of ${a} and ${b}?`, value: g, tol: 0.011, display: `${g}`, explain: `The largest factor both share is ${g}.` }; }
-  const l = a * b / gcd(a, b); return { type: "numeric", prompt: `LCM of ${a} and ${b}?`, value: l, tol: 0.011, display: `${l}`, explain: `a×b ÷ GCF = ${a}×${b} ÷ ${gcd(a, b)} = ${l}.` };
-}
-function genDecimals() {
-  const op = pick(["+", "−", "×"]); let a, b, value;
-  if (op === "×") { a = r1(rnd(11, 99) / 10); b = rnd(2, 12); value = r2(a * b); }
-  else { a = r2(rnd(50, 4000) / 100); b = r2(rnd(50, 4000) / 100); if (op === "−" && b > a) [a, b] = [b, a]; value = r2(op === "+" ? a + b : a - b); }
-  return { type: "numeric", prompt: `${a}  ${op}  ${b}`, value, tol: 0.011, display: `${value}`, explain: `Line up the decimal points (or count decimal places for ×). Answer: ${value}.` };
-}
-
-/* ---- Unit 2: Rational Numbers ---- */
-function genIntegers() {
-  const op = pick(["+", "−", "×", "÷"]); let a, b, value;
-  if (op === "÷") { b = rnd(2, 9) * pick([1, -1]); const q = rnd(2, 9) * pick([1, -1]); a = b * q; value = q; }
-  else if (op === "×") { a = rnd(2, 12) * pick([1, -1]); b = rnd(2, 12) * pick([1, -1]); value = a * b; }
-  else { a = rnd(-15, 15); b = rnd(-15, 15); value = op === "+" ? a + b : a - b; }
-  const bb = b < 0 ? `(${b})` : `${b}`;
-  return { type: "numeric", prompt: `${a}  ${op}  ${bb}`, value, tol: 0.011, display: `${value}`, explain: `Watch the signs. Answer: ${value}.` };
-}
-function genRationals() {
-  const t = pick(["fadd", "dmul", "fdiv"]);
-  if (t === "fadd") { const n1 = rnd(1, 7) * pick([1, -1]), d1 = rnd(2, 8), n2 = rnd(1, 7) * pick([1, -1]), d2 = rnd(2, 8);
-    let rn = n1 * d2 + n2 * d1, rd = d1 * d2; [rn, rd] = simp(rn, rd);
-    return { type: "fraction", prompt: `${fracStr(n1, d1)}   +   ${fracStr(n2, d2)}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Common denominator, mind the signs → ${fracStr(rn, rd)}.` }; }
-  if (t === "dmul") { const a = r1(rnd(11, 60) / 10) * pick([1, -1]); const b = rnd(2, 9) * pick([1, -1]); const v = r2(a * b);
-    return { type: "numeric", prompt: `${a}  ×  ${b < 0 ? `(${b})` : b}`, value: v, tol: 0.011, display: `${v}`, explain: `Multiply, then set the sign (same → +, different → −). Answer: ${v}.` }; }
-  const n1 = rnd(1, 7) * pick([1, -1]), d1 = rnd(2, 8), n2 = rnd(1, 7), d2 = rnd(2, 8);
-  let rn = n1 * d2, rd = d1 * n2; [rn, rd] = simp(rn, rd);
-  return { type: "fraction", prompt: `${fracStr(n1, d1)}   ÷   ${fracStr(n2, d2)}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Divide = multiply by the reciprocal → ${fracStr(rn, rd)}.` };
-}
-function genAbsValue() {
-  const t = pick(["abs", "opp", "dist"]);
-  if (t === "abs") { const x = rnd(-20, 20); return { type: "numeric", prompt: `|${x}| = ?`, value: Math.abs(x), tol: 0.011, display: `${Math.abs(x)}`, explain: `Absolute value is distance from 0 → ${Math.abs(x)}.` }; }
-  if (t === "opp") { const x = rnd(-20, 20) || 7; return { type: "numeric", prompt: `What is the opposite of ${x}?`, value: -x, tol: 0.011, display: `${-x}`, explain: `The opposite flips the sign → ${-x}.` }; }
-  const a = rnd(-12, 12); let b = rnd(-12, 12); while (b === a) b = rnd(-12, 12);
-  return { type: "numeric", prompt: `Distance between ${a} and ${b} on a number line?`, value: Math.abs(a - b), tol: 0.011, display: `${Math.abs(a - b)}`, explain: `|${a} − (${b})| = ${Math.abs(a - b)}.` };
-}
-function genFracToDec() {
-  const d = pick([2, 4, 5, 8, 10, 20, 25]); const n = rnd(1, d - 1); const v = n / d;
-  return { type: "numeric", prompt: `Write ${n}/${d} as a decimal.`, value: v, tol: 0.005, display: `${v}`, explain: `${n} ÷ ${d} = ${v}.` };
-}
-
-/* ---- Unit 3: Expressions, Equations & Inequalities ---- */
-function genPemdas() {
-  const tmpl = rnd(1, 4); let prompt, value;
-  const a = rnd(2, 9), b = rnd(2, 9), c = rnd(2, 6);
-  if (tmpl === 1) { prompt = `${a} + ${b} × ${c}`; value = a + b * c; }
-  else if (tmpl === 2) { prompt = `(${a} + ${b}) × ${c}`; value = (a + b) * c; }
-  else if (tmpl === 3) { const s = rnd(2, 5); prompt = `${a} + ${s}²`; value = a + s * s; }
-  else { prompt = `${a * c} ÷ ${c} + ${b}`; value = a + b; }
-  return { type: "numeric", prompt, value, tol: 0.011, display: `${value}`, explain: `Parentheses, Exponents, ×÷, then +−. Answer: ${value}.` };
-}
-function genEvaluate() {
-  const a = rnd(2, 9), b = rnd(-6, 9), x = rnd(-5, 8);
-  if (pick(["lin", "sq"]) === "lin") { const val = a * x + b; const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
-    return { type: "numeric", prompt: `Evaluate ${a}x ${bb} when x = ${x}.`, value: val, tol: 0.011, display: `${val}`, explain: `${a}(${x}) ${b < 0 ? "−" : "+"} ${Math.abs(b)} = ${val}.` }; }
-  const c = rnd(2, 5); const val = a * x * x + c;
-  return { type: "numeric", prompt: `Evaluate ${a}x² + ${c} when x = ${x}.`, value: val, tol: 0.011, display: `${val}`, explain: `${a}(${x})² + ${c} = ${a * x * x} + ${c} = ${val}.` };
-}
-function genExpressions() {
-  const a = rnd(2, 6), b = rnd(2, 9), c = rnd(1, 6);
-  const coef = a + c, con = a * b; const correct = `${coef}x + ${con}`;
-  const opts = new Set([correct]);
-  opts.add(`${coef}x + ${a * b + b}`); opts.add(`${a + c + 1}x + ${con}`); opts.add(`${coef}x + ${con + a}`);
-  const arr = shuffle([...opts].slice(0, 4));
-  return { type: "choice", prompt: `Simplify:   ${a}(x + ${b}) + ${c}x`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `Distribute: ${a}x + ${a * b}, then add ${c}x → ${correct}.` };
-}
-function genOneStepEq() {
-  const t = pick(["add", "sub", "mul", "div"]);
-  if (t === "add") { const x = rnd(-12, 20), b = rnd(1, 15); return { type: "numeric", prompt: `Solve:   x + ${b} = ${x + b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Subtract ${b}: x = ${x + b} − ${b} = ${x}.` }; }
-  if (t === "sub") { const x = rnd(-12, 20), b = rnd(1, 15); return { type: "numeric", prompt: `Solve:   x − ${b} = ${x - b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Add ${b}: x = ${x - b} + ${b} = ${x}.` }; }
-  if (t === "mul") { const a = rnd(2, 9), x = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   ${a}x = ${a * x}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Divide by ${a}: x = ${a * x} ÷ ${a} = ${x}.` }; }
-  const a = rnd(2, 9), q = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   x ÷ ${a} = ${q}`, value: q * a, tol: 0.011, display: `x = ${q * a}`, explain: `Multiply by ${a}: x = ${q} × ${a} = ${q * a}.` };
-}
-function genOneStepIneq() {
-  const op = pick(["<", ">", "≤", "≥"]);
-  if (pick(["add", "mul"]) === "add") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x + b;
-    return { type: "numeric", prompt: `Solve:   x + ${b} ${op} ${c}\nx ${op} ?`, value: x, tol: 0.011, display: `x ${op} ${x}`, explain: `Subtract ${b}: x ${op} ${c} − ${b} = ${x}.` }; }
-  const a = rnd(2, 6), x = rnd(-6, 8); const c = a * x;
-  return { type: "numeric", prompt: `Solve:   ${a}x ${op} ${c}\nx ${op} ?`, value: x, tol: 0.011, display: `x ${op} ${x}`, explain: `Divide by ${a} (positive, so keep the sign): x ${op} ${x}.` };
-}
-
-/* ---- Unit 4: Ratios, Proportions & Percents ---- */
-function genRatios() {
-  const t = pick(["speed", "unit", "scale"]);
-  if (t === "speed") { const mpm = rnd(2, 12) * 5; const m = rnd(2, 6); const dist = mpm * m;
-    return { type: "numeric", prompt: `Beach FC drill: ran ${dist} meters in ${m} minutes. Meters per minute?`, value: mpm, tol: 0.011, display: `${mpm} m/min`, explain: `${dist} ÷ ${m} = ${mpm} m/min.` }; }
-  if (t === "unit") { const each = rnd(2, 9); const q = rnd(3, 8); const total = each * q;
-    return { type: "numeric", prompt: `${q} candy bars cost $${total}. Cost of 1 candy bar?`, value: each, tol: 0.011, display: `$${each}`, explain: `${total} ÷ ${q} = $${each} each.` }; }
-  const each = rnd(2, 6); const q1 = rnd(2, 5); const q2 = rnd(6, 10); const total = each * q2;
-  return { type: "numeric", prompt: `If ${q1} ring pops cost $${each * q1}, how much do ${q2} ring pops cost?`, value: total, tol: 0.011, display: `$${total}`, explain: `Unit price $${each}. ${each} × ${q2} = $${total}.` };
-}
-function genProportions() {
-  const t = pick(["solve", "candy", "soccer"]);
-  if (t === "solve") { const b = rnd(3, 9); const k = rnd(2, 6); const a = rnd(1, b - 1); const d = b * k; const x = a * k;
-    return { type: "numeric", prompt: `Solve for x:   ${a}/${b} = x/${d}`, value: x, tol: 0.011, display: `${x}`, explain: `${d} ÷ ${b} = ${k}, so x = ${a} × ${k} = ${x}.` }; }
-  if (t === "candy") { const k = rnd(2, 8); const x1 = rnd(2, 5); const x2 = rnd(6, 12);
-    return { type: "numeric", prompt: `Candy is the same price per piece. ${x1} pieces cost $${k * x1}. Cost of ${x2} pieces?`, value: k * x2, tol: 0.011, display: `$${k * x2}`, explain: `Unit rate $${k}/piece. ${k} × ${x2} = $${k * x2}.` }; }
-  const k = rnd(1, 4); const g = rnd(3, 8);
-  return { type: "numeric", prompt: `Beach FC scores a steady ${k} goal${k > 1 ? "s" : ""} per game. Goals in ${g} games?`, value: k * g, tol: 0.011, display: `${k * g}`, explain: `${k} × ${g} = ${k * g} goals.` };
-}
-function genSlope() {
-  const m = rnd(-4, 4) || 2; const x1 = rnd(-6, 6); let x2 = rnd(-6, 6); while (x2 === x1) x2 = rnd(-6, 6);
-  const y1 = rnd(-6, 6); const y2 = y1 + m * (x2 - x1);
-  return { type: "numeric", prompt: `Find the slope through (${x1}, ${y1}) and (${x2}, ${y2}).`, value: m, tol: 0.011, display: `${m}`, explain: `(${y2}−${y1}) ÷ (${x2}−${x1}) = ${y2 - y1}/${x2 - x1} = ${m}.` };
-}
-function genPercents() {
-  const t = pick(["of", "what", "discount", "tip"]);
-  if (t === "of") { const p = pick([5, 10, 15, 20, 25, 30, 40, 50, 60, 75]); const n = rnd(2, 40) * 5; const v = r2(p / 100 * n);
-    return { type: "numeric", prompt: `What is ${p}% of ${n}?`, value: v, tol: 0.011, display: `${v}`, explain: `${p}% = ${p / 100}. ${p / 100} × ${n} = ${v}.` }; }
-  if (t === "what") { const n = rnd(4, 20) * 5; const x = rnd(1, n / 5) * 5; const v = r2(x / n * 100);
-    return { type: "numeric", prompt: `What percent of ${n} is ${x}?`, value: v, tol: 0.05, display: `${v}%`, explain: `${x} ÷ ${n} = ${r2(x / n)}, ×100 = ${v}%.` }; }
-  if (t === "discount") { const price = rnd(2, 30) * 5; const p = pick([10, 15, 20, 25, 30, 40, 50]); const v = r2(price * (1 - p / 100));
-    return { type: "numeric", prompt: `A $${price} bag of candy is ${p}% off. New price?`, value: v, tol: 0.011, display: `$${v}`, explain: `Pay ${100 - p}%: ${price} × ${(100 - p) / 100} = $${v}.` }; }
-  const price = rnd(2, 30) * 5; const p = pick([5, 10, 15, 20, 25]); const v = r2(price * (1 + p / 100));
-  return { type: "numeric", prompt: `A $${price} snack-bar bill plus a ${p}% tip. Total?`, value: v, tol: 0.011, display: `$${v}`, explain: `Pay ${100 + p}%: ${price} × ${(100 + p) / 100} = $${v}.` };
-}
-function genPercentChange() {
-  const o = pick([[10, 10], [20, 5], [25, 4], [50, 2]]); const p = o[0]; const mult = o[1];
-  const start = rnd(2, 20) * mult; const change = start * p / 100; const dir = pick(["increase", "decrease"]);
-  const nw = dir === "increase" ? start + change : start - change;
-  return { type: "numeric", prompt: `A price changes from $${start} to $${nw}. Percent ${dir}?`, value: p, tol: 0.05, display: `${p}%`, explain: `Change ${change} ÷ original ${start} = ${r2(change / start)}, ×100 = ${p}%.` };
-}
-function genSimpleInterest() {
-  const P = rnd(2, 20) * 100; const r = pick([2, 3, 4, 5, 6, 8, 10]); const t = rnd(1, 5); const I = P * (r / 100) * t;
-  return { type: "numeric", prompt: `Simple interest: P = $${P}, r = ${r}% per year, t = ${t} years. Interest?`, value: I, tol: 0.011, display: `$${I}`, explain: `I = Prt = ${P} × ${r / 100} × ${t} = $${I}.` };
-}
-
-/* ---- Unit 5: Geometry ---- */
-function genCircles() {
-  const r = rnd(2, 12); const PI = 3.14;
-  if (pick(["area", "circ"]) === "area") { const v = r2(PI * r * r); return { type: "numeric", prompt: `Circle radius = ${r}. Area? (use π ≈ 3.14)`, value: v, tol: 0.5, display: `${v}`, explain: `A = πr² = 3.14 × ${r}² = ${v}.` }; }
-  const v = r2(2 * PI * r); return { type: "numeric", prompt: `Circle radius = ${r}. Circumference? (use π ≈ 3.14)`, value: v, tol: 0.5, display: `${v}`, explain: `C = 2πr = 2 × 3.14 × ${r} = ${v}.` };
-}
-function genPolygonArea() {
-  const t = pick(["tri", "para", "trap"]);
-  if (t === "tri") { const b = rnd(3, 20), h = rnd(2, 18); const A = b * h / 2; return { type: "numeric", prompt: `Triangle: base ${b}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `½ × b × h = ½ × ${b} × ${h} = ${A}.` }; }
-  if (t === "para") { const b = rnd(3, 20), h = rnd(2, 18); const A = b * h; return { type: "numeric", prompt: `Parallelogram: base ${b}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `b × h = ${b} × ${h} = ${A}.` }; }
-  const b1 = rnd(3, 12), b2 = rnd(3, 12), h = rnd(2, 12); const A = (b1 + b2) / 2 * h;
-  return { type: "numeric", prompt: `Trapezoid: bases ${b1} and ${b2}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `½(b₁+b₂)h = ½(${b1}+${b2})×${h} = ${A}.` };
-}
-function genVolume() {
-  if (pick(["rect", "tri"]) === "rect") { const l = rnd(2, 10), w = rnd(2, 10), h = rnd(2, 10); const V = l * w * h;
-    return { type: "numeric", prompt: `Rectangular prism ${l} × ${w} × ${h}. Volume?`, value: V, tol: 0.011, display: `${V}`, explain: `l×w×h = ${l}×${w}×${h} = ${V}.` }; }
-  const b = rnd(3, 12), ht = rnd(2, 12), len = rnd(2, 12); const V = (b * ht / 2) * len;
-  return { type: "numeric", prompt: `Triangular prism: triangle base ${b}, triangle height ${ht}, length ${len}. Volume?`, value: V, tol: 0.011, display: `${V}`, explain: `(½ × ${b} × ${ht}) × ${len} = ${b * ht / 2} × ${len} = ${V}.` };
-}
-function genSurfaceArea() {
-  const l = rnd(2, 9), w = rnd(2, 9), h = rnd(2, 9); const SA = 2 * (l * w + l * h + w * h);
-  return { type: "numeric", prompt: `Rectangular prism ${l} × ${w} × ${h}. Surface area?`, value: SA, tol: 0.011, display: `${SA}`, explain: `2(lw+lh+wh) = 2(${l * w}+${l * h}+${w * h}) = ${SA}.` };
-}
-
-/* ---- Unit 6: Statistics ---- */
-function genStats() {
-  const t = pick(["mean", "median", "mode", "range"]);
-  if (t === "mode") {
-    const modeVal = rnd(1, 20); const others = []; while (others.length < 3) { const v = rnd(1, 20); if (v !== modeVal && !others.includes(v)) others.push(v); }
-    const set = shuffle([modeVal, modeVal, modeVal, ...others]);
-    return { type: "numeric", prompt: `Find the mode: ${set.join(", ")}`, value: modeVal, tol: 0.011, display: `${modeVal}`, explain: `${modeVal} appears most often → ${modeVal}.` };
-  }
-  const n = rnd(5, 6); const arr = []; for (let i = 0; i < n; i++) arr.push(rnd(1, 20));
-  if (t === "range") { const mx = Math.max(...arr), mn = Math.min(...arr); return { type: "numeric", prompt: `Find the range: ${arr.join(", ")}`, value: mx - mn, tol: 0.011, display: `${mx - mn}`, explain: `Max ${mx} − min ${mn} = ${mx - mn}.` }; }
-  if (t === "median") { const s = [...arr].sort((a, b) => a - b); const med = n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; return { type: "numeric", prompt: `Find the median: ${arr.join(", ")}`, value: med, tol: 0.011, display: `${med}`, explain: `Sorted: ${s.join(", ")}. Middle value → ${med}.` }; }
-  let s = arr.reduce((a, b) => a + b, 0); const rem = s % n; if (rem !== 0) arr[arr.length - 1] += (n - rem);
-  s = arr.reduce((a, b) => a + b, 0); const mean = s / n;
-  return { type: "numeric", prompt: `Find the mean: ${arr.join(", ")}`, value: mean, tol: 0.011, display: `${mean}`, explain: `Sum ${s} ÷ ${n} = ${mean}.` };
-}
-function genMAD() {
-  const m = rnd(6, 15); const d = rnd(1, 5), e = rnd(1, 5);
-  const set = shuffle([m - d, m - e, m + e, m + d]); const mad = (d + e + e + d) / 4;
-  return { type: "numeric", prompt: `Find the mean absolute deviation: ${set.join(", ")}`, value: mad, tol: 0.011, display: `${mad}`, explain: `Mean is ${m}; distances ${d}, ${e}, ${e}, ${d}. MAD = (${d}+${e}+${e}+${d})/4 = ${mad}.` };
-}
-
-function parseNum(s) {
-  if (s == null) return null;
-  let t = String(s).trim().replace(/[$%\s°]/g, "");
-  if (t === "" || t === "-") return null;
-  if (t.includes("/")) { const [a, b] = t.split("/"); const na = Number(a), nb = Number(b); if (!isFinite(na) || !isFinite(nb) || nb === 0) return null; return na / nb; }
-  const n = Number(t); return isFinite(n) ? n : null;
-}
-function isCorrect(problem, input, choiceIndex) {
-  if (problem.type === "choice") return choiceIndex === problem.answerIndex;
-  const v = parseNum(input);
-  if (v === null) return false;
-  return Math.abs(v - problem.value) <= (problem.tol || 0.011);
-}
-
-
-
-/* ===== Topics mapped to her 6 units ===== */
-const UNIT_META = {
-  1: { title: "Unit 1 · Fractions & Decimals", color: "#12718E" },
-  2: { title: "Unit 2 · Rational Numbers", color: "#2BAE8E" },
-  3: { title: "Unit 3 · Expressions, Equations & Inequalities", color: "#3C9CC4" },
-  4: { title: "Unit 4 · Ratios, Proportions & Percents", color: "#D9912F" },
-  5: { title: "Unit 5 · Geometry", color: "#E8653D" },
-  6: { title: "Unit 6 · Statistics", color: "#A95FC9" },
-};
-const TOPICS = [
-  { id: "fractions",   unit: 1, candy: "🍬", name: "Fraction Operations",      blurb: "× ÷ flip-and-multiply; + − need a common denominator. Then simplify.", gen: genFractions },
-  { id: "gcflcm",      unit: 1, candy: "🍭", name: "GCF & LCM",                 blurb: "GCF = biggest shared factor. LCM = smallest shared multiple.", gen: genGcfLcm },
-  { id: "decimals",    unit: 1, candy: "🍫", name: "Decimal Operations",       blurb: "Line up decimal points for + −; count decimal places for ×.", gen: genDecimals },
-
-  { id: "integers",    unit: 2, candy: "🍩", name: "Positive & Negatives",     blurb: "Add, subtract, multiply, divide positive and negative numbers.", gen: genIntegers },
-  { id: "negfrac",     unit: 2, candy: "🍪", name: "Negative Fractions & Decimals", blurb: "All four operations with negative fractions and decimals.", gen: genRationals },
-  { id: "absval",      unit: 2, candy: "🧁", name: "Absolute Value & Opposites", blurb: "Absolute value is distance from 0. Opposites flip the sign.", gen: genAbsValue },
-  { id: "fractodec",   unit: 2, candy: "🍰", name: "Fractions → Decimals",     blurb: "Divide the top by the bottom to get the decimal.", gen: genFracToDec },
-
-  { id: "pemdas",      unit: 3, candy: "🍦", name: "Order of Operations",      blurb: "Parentheses, Exponents, ×÷ (left→right), then +− (left→right).", gen: genPemdas },
-  { id: "evaluate",    unit: 3, candy: "🍨", name: "Evaluate Expressions",     blurb: "Substitute the number for x, then follow order of operations.", gen: genEvaluate },
-  { id: "expressions", unit: 3, candy: "🍧", name: "Distribute & Combine",     blurb: "Distribute a(b + c) = ab + ac, then combine like terms.", gen: genExpressions },
-  { id: "onestepeq",   unit: 3, candy: "🍡", name: "One-Step Equations",       blurb: "Undo the one operation to get x by itself.", gen: genOneStepEq },
-  { id: "onestepineq", unit: 3, candy: "🍮", name: "One-Step Inequalities",    blurb: "Solve like an equation; the answer is a range of values.", gen: genOneStepIneq },
-
-  { id: "ratios",      unit: 4, candy: "🍯", name: "Ratios & Unit Rates",      blurb: "A unit rate is the amount per 1 — divide to find “per one.”", gen: genRatios },
-  { id: "proportions", unit: 4, candy: "🍓", name: "Proportional Relationships", blurb: "Equal ratios. Find the constant rate, then scale up or down.", gen: genProportions },
-  { id: "slope",       unit: 4, candy: "🫐", name: "Slope of a Graph",         blurb: "Slope = rise ÷ run = (y₂ − y₁) / (x₂ − x₁).", gen: genSlope },
-  { id: "percents",    unit: 4, candy: "🍇", name: "Percents",                 blurb: "Percent = per 100. Of, off (discounts), and on top (tax/tip).", gen: genPercents },
-  { id: "pctchange",   unit: 4, candy: "🍒", name: "Percent Change",           blurb: "Change ÷ original × 100. Up = increase, down = decrease.", gen: genPercentChange },
-  { id: "interest",    unit: 4, candy: "🍉", name: "Simple Interest",          blurb: "Simple interest I = P × r × t.", gen: genSimpleInterest },
-
-  { id: "circles",     unit: 5, candy: "🍊", name: "Circles: Area & Circumference", blurb: "Area = πr². Circumference = 2πr. Use π ≈ 3.14.", gen: genCircles },
-  { id: "polygons",    unit: 5, candy: "🍌", name: "Area of Polygons",         blurb: "Triangle ½bh · parallelogram bh · trapezoid ½(b₁+b₂)h.", gen: genPolygonArea },
-  { id: "volume",      unit: 5, candy: "🍎", name: "Volume of Prisms",         blurb: "Volume = area of the base × height (or length).", gen: genVolume },
-  { id: "surfacearea", unit: 5, candy: "🍑", name: "Surface Area",             blurb: "Add the areas of all faces: 2(lw + lh + wh).", gen: genSurfaceArea },
-
-  { id: "stats",       unit: 6, candy: "🥝", name: "Mean · Median · Mode · Range", blurb: "Four ways to describe the center and spread of data.", gen: genStats },
-  { id: "mad",         unit: 6, candy: "🍍", name: "Mean Absolute Deviation",  blurb: "The average distance of each value from the mean.", gen: genMAD },
-];
-const TOPIC_MAP = Object.fromEntries(TOPICS.map((t) => [t.id, t]));
-const ALL_IDS = TOPICS.map((t) => t.id);
-const colorOf = (tid) => UNIT_META[TOPIC_MAP[tid].unit].color;
-
-/* ===== 8-week summer schedule (finish by Aug 14) ===== */
-const SCHEDULE = [
-  { title: "Unit 1 · Fractions & Decimals", ids: ["fractions", "gcflcm", "decimals"] },
-  { title: "Unit 2 · Rational Numbers", ids: ["integers", "negfrac", "absval", "fractodec"] },
-  { title: "Unit 3 · Expressions & Equations", ids: ["pemdas", "evaluate", "expressions", "onestepeq", "onestepineq"] },
-  { title: "Unit 4 · Ratios & Proportions", ids: ["ratios", "proportions", "slope"] },
-  { title: "Unit 4 · Percents", ids: ["percents", "pctchange", "interest"] },
-  { title: "Unit 5 · Geometry", ids: ["circles", "polygons", "volume", "surfacearea"] },
-  { title: "Unit 6 · Statistics", ids: ["stats", "mad"] },
-  { title: "Mixed Review & Finish 🏁", ids: ALL_IDS },
-];
-const START = new Date(2026, 5, 15); // Mon Jun 15, 2026
-function currentWeek() {
-  const w = Math.floor((Date.now() - START.getTime()) / (7 * 86400000));
-  return Math.max(0, Math.min(SCHEDULE.length - 1, w));
-}
-
-const MASTERY_GOAL = 15;
-const DAILY_GOAL = 12;
-const STORE_KEY = "beach_math_v2";
-const RANKS = ["Sandcrab", "Tide Pooler", "Rookie Guard", "Junior Guard", "Senior Guard", "Tower Lead", "Lifeguard Lt.", "Captain", "Chief"];
-const rankName = (lvl) => RANKS[Math.min(lvl - 1, RANKS.length - 1)];
-
-const _mem = {};
-const Store = {
-  get(k) { try { return localStorage.getItem(k); } catch (e) { return k in _mem ? _mem[k] : null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { _mem[k] = v; } },
-};
-function logEvent(payload) {
-  if (!CONFIG.LOG_URL) return;
-  try { fetch(CONFIG.LOG_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) }); } catch (e) {}
-}
-
-const dayStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
-const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {}, queue: [] };
-function loadProgress() {
-  try { const raw = Store.get(STORE_KEY); if (raw) return { ...DEFAULT_PROGRESS, ...JSON.parse(raw) }; } catch (e) {}
-  return DEFAULT_PROGRESS;
-}
-function snapshot(p) {
-  return { key: p.key, topicId: p.topicId, type: p.type, prompt: p.prompt, display: p.display, explain: p.explain, value: p.value, tol: p.tol, answerIndex: p.answerIndex, choices: p.choices, hits: 0 };
-}
-function applyAnswer(p, correct, problem, mode) {
-  const today = dayStr(); let { streak, lastDay } = p; let today_ = p.today;
-  if (today_.day !== today) { streak = lastDay === yesterdayStr() ? streak + 1 : 1; lastDay = today; today_ = { day: today, count: 0 }; }
-  today_ = { day: today, count: today_.count + 1 };
-  const t = p.topics[problem.topicId] || { correct: 0, attempts: 0 };
-  const nt = { correct: t.correct + (correct ? 1 : 0), attempts: t.attempts + 1 };
-  let queue = p.queue || [];
-  if (mode === "review") {
-    queue = queue.map((it) => (it.key === problem.key ? { ...it, hits: correct ? it.hits + 1 : 0 } : it)).filter((it) => it.hits < 2);
-  } else if (!correct) {
-    if (!queue.some((it) => it.key === problem.key)) { queue = [...queue, snapshot(problem)]; if (queue.length > 60) queue = queue.slice(queue.length - 60); }
-  }
-  return { ...p, xp: p.xp + (correct ? 10 : 2), streak, lastDay, today: today_, topics: { ...p.topics, [problem.topicId]: nt }, queue };
-}
-function makeProblem(tid) { const p = TOPIC_MAP[tid].gen(); return { ...p, topicId: tid, key: tid + "|" + p.prompt }; }
-
-/* ===== APP ===== */
-function App() {
-  const [progress, setProgress] = useState(loadProgress);
-  const [view, setView] = useState("map");
-  const [mode, setMode] = useState("topic");      // topic | mix | week | review
-  const [pool, setPool] = useState(ALL_IDS);
-  const [activeName, setActiveName] = useState("");
-  const [problem, setProblem] = useState(null);
-  const [input, setInput] = useState("");
-  const [picked, setPicked] = useState(null);
-  const [feedback, setFeedback] = useState(null);
-  const [session, setSession] = useState({ seen: 0, correct: 0 });
-  const [reviewDone, setReviewDone] = useState(false);
-  const inputRef = useRef(null);
-
-  useEffect(() => { Store.set(STORE_KEY, JSON.stringify(progress)); }, [progress]);
-
-  const level = Math.floor(progress.xp / 100) + 1;
-  const intoLevel = progress.xp % 100;
-  const todayCount = progress.today.day === dayStr() ? progress.today.count : 0;
-  const treats = useMemo(() => TOPICS.filter((t) => (progress.topics[t.id]?.correct || 0) >= MASTERY_GOAL), [progress.topics]);
-  const queueLen = (progress.queue || []).length;
-  const wk = currentWeek();
-
-  function focusInput() { setTimeout(() => inputRef.current && inputRef.current.focus(), 60); }
-  function begin(m, p, name) {
-    setMode(m); setPool(p); setActiveName(name || ""); setSession({ seen: 0, correct: 0 }); setReviewDone(false);
-    const first = m === "review" ? ((progress.queue || [])[0] ? { ...(progress.queue || [])[0] } : null) : makeProblem(pick(p));
-    if (m === "review" && !first) { setReviewDone(true); setProblem(null); } else setProblem(first);
-    setInput(""); setPicked(null); setFeedback(null); setView("practice"); focusInput();
-  }
-  function startTopic(tid) { begin("topic", [tid], TOPIC_MAP[tid].name); }
-  function startMix() { begin("mix", ALL_IDS, "Daily Patrol"); }
-  function startWeek() { begin("week", SCHEDULE[wk].ids, "This Week"); }
-  function startReview() { begin("review", ALL_IDS, "Review Misses"); }
-
-  function nextProblem() {
-    if (mode === "review") {
-      const it = (progress.queue || [])[0];
-      if (!it) { setProblem(null); setReviewDone(true); return; }
-      setProblem({ ...it });
-    } else {
-      setProblem(makeProblem(pick(pool)));
-    }
-    setInput(""); setPicked(null); setFeedback(null); focusInput();
-  }
-
-  function submit() {
-    if (!problem || feedback) return;
-    if (problem.type === "choice" && picked === null) return;
-    if (problem.type !== "choice" && input.trim() === "") return;
-    const correct = isCorrect(problem, input, picked);
-    const np = applyAnswer(progress, correct, problem, mode);
-    setProgress(np);
-    setSession((s) => ({ seen: s.seen + 1, correct: s.correct + (correct ? 1 : 0) }));
-    setFeedback({ correct, problem });
-    const topic = TOPIC_MAP[problem.topicId];
-    logEvent({ ts: new Date().toISOString(), name: CONFIG.KID_NAME, mode, unit: topic.unit, topic: topic.name,
-      correct: correct ? 1 : 0, given: problem.type === "choice" ? problem.choices[picked] : input.trim(),
-      answer: problem.display, xp: np.xp, streak: np.streak, level: Math.floor(np.xp / 100) + 1 });
-  }
-  function onKey(e) { if (e.key === "Enter") { e.preventDefault(); feedback ? nextProblem() : submit(); } }
-
-  return (
-    <div style={S.root}>
-      <style>{CSS}</style>
-      <header style={S.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={S.logo}>☀</div>
-          <div>
-            <div style={S.title}>Beach Math</div>
-            <div style={S.subtitle}>{CONFIG.KID_NAME ? `Hi ${CONFIG.KID_NAME} — ` : ""}{treats.length} of {TOPICS.length} treats earned</div>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <div style={S.chip} title="Day streak"><span style={{ fontSize: 15 }}>🌊</span> {progress.streak}</div>
-          <div style={S.chip} title={`Level ${level}`}>{rankName(level)}</div>
-        </div>
-      </header>
-
-      <div style={S.band}>
-        <div style={S.bandRow}><span style={S.bandLabel}>Today's patrol</span><span style={S.bandLabel}>{Math.min(todayCount, DAILY_GOAL)} / {DAILY_GOAL}</span></div>
-        <Bar pct={Math.min(todayCount / DAILY_GOAL, 1) * 100} color="#FFB740" />
-        <div style={{ ...S.bandRow, marginTop: 10 }}><span style={S.bandLabel}>{rankName(level)}</span><span style={S.bandLabel}>{intoLevel} / 100 XP</span></div>
-        <Bar pct={intoLevel} color="#2BAE8E" />
-        {treats.length > 0 && <div style={S.treatJar}>{treats.map((t) => <span key={t.id} title={t.name}>{t.candy}</span>)}</div>}
-      </div>
-
-      {view === "map" ? (
-        <MapView progress={progress} wk={wk} queueLen={queueLen} todayCount={todayCount}
-          onTopic={startTopic} onMix={startMix} onWeek={startWeek} onReview={startReview} />
-      ) : (
-        <PracticeView problem={problem} mode={mode} activeName={activeName} reviewDone={reviewDone} queueLen={queueLen}
-          input={input} setInput={setInput} picked={picked} setPicked={setPicked} feedback={feedback}
-          session={session} inputRef={inputRef} onKey={onKey} onSubmit={submit} onNext={nextProblem} onBack={() => setView("map")} />
-      )}
-      <footer style={S.footer}>Progress saves on this device{CONFIG.LOG_URL ? " · synced to the family sheet" : ""}.</footer>
+<header>
+  <div class="header-inner">
+    <div class="header-title">
+      <span class="eyebrow">⚽ FIFA World Cup 2026</span>
+      <h1>Match Tracker <button class="info-btn" onclick="showGuide()" title="About this site">i</button> <button class="info-btn" onclick="shareSite()" title="Share" style="font-style:normal">⤴</button></h1>
+      <span class="byline">by Aquadoc</span>
     </div>
-  );
-}
-
-function MapView({ progress, wk, queueLen, todayCount, onTopic, onMix, onWeek, onReview }) {
-  const weekIds = new Set(SCHEDULE[wk].ids);
-  const units = [1, 2, 3, 4, 5, 6];
-  return (
-    <main style={S.main}>
-      <button className="mixcard focusable" style={S.weekCard} onClick={onWeek}>
-        <div>
-          <div style={S.mixKicker}>Week {wk + 1} of {SCHEDULE.length} · This week</div>
-          <div style={S.mixTitle}>{SCHEDULE[wk].title}</div>
-          <div style={S.mixSub}>{todayCount >= DAILY_GOAL ? "Patrol done today — streak safe! 🔥" : `Tap to drill just this week's skills. ${DAILY_GOAL - todayCount} to go today.`}</div>
-        </div>
-        <div style={S.mixArrow}>→</div>
-      </button>
-
-      <div style={S.ctaRow}>
-        <button className="cta focusable" style={{ ...S.cta, background: "linear-gradient(120deg,#12718E,#2BAE8E)" }} onClick={onMix}>
-          <span style={{ fontSize: 18 }}>🌊</span> Daily Patrol<span style={S.ctaSub}>mix of everything</span>
-        </button>
-        <button className="cta focusable" style={{ ...S.cta, background: queueLen ? "linear-gradient(120deg,#E8853D,#E8653D)" : "#C9BFAC", cursor: queueLen ? "pointer" : "default" }} onClick={queueLen ? onReview : undefined}>
-          <span style={{ fontSize: 18 }}>🎯</span> Review Misses<span style={S.ctaSub}>{queueLen ? `${queueLen} to clear` : "none yet 🎉"}</span>
-        </button>
+    <div class="header-right-group">
+      <button class="pool-nav" onclick="showView('pool', null)" title="Knockout prediction pool">Pool <span class="nv-new">NEW</span></button>
+      <div class="header-right">
+      <div class="live-clock">
+        <div class="time" id="clock">--:-- --</div>
+        <div class="tz" id="clockTzLabel">Pacific Time</div>
       </div>
+      <span class="api-status" id="apiStatus">Connecting…</span>
+    </div>
+    </div>
+  </div>
+</header>
 
-      {units.map((u) => (
-        <div key={u}>
-          <div style={{ margin: "22px 2px 12px" }}>
-            <div style={{ ...S.sectionTitle, color: UNIT_META[u].color }}>{UNIT_META[u].title}</div>
-          </div>
-          <div style={S.grid}>
-            {TOPICS.filter((t) => t.unit === u).map((t) => (
-              <TopicCard key={t.id} topic={t} stat={progress.topics[t.id]} thisWeek={weekIds.has(t.id)} onClick={() => onTopic(t.id)} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </main>
-  );
-}
+<div class="tab-bar">
+  <div class="tabs">
+    <button class="tab active" onclick="showView('schedule',this)">Schedule</button>
+    <button class="tab" onclick="showView('groups',this)">Groups & Standings</button>
+    <button class="tab" onclick="showView('knockout',this)">Knockout</button>
+    <button class="tab" onclick="showView('teams',this)">Teams</button>
+  </div>
+</div>
 
-function TopicCard({ topic, stat, thisWeek, onClick }) {
-  const correct = stat?.correct || 0;
-  const pct = Math.min(correct / MASTERY_GOAL, 1) * 100;
-  const mastered = correct >= MASTERY_GOAL;
-  const color = UNIT_META[topic.unit].color;
-  return (
-    <button className="topiccard focusable" style={S.card} onClick={onClick}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-        <span style={{ ...S.dot, background: color }} />
-        {mastered ? <span style={{ ...S.masterBadge, color }}>{topic.candy} mastered</span>
-          : thisWeek ? <span style={{ ...S.weekTag, color, borderColor: color }}>this week</span>
-          : <span style={S.countBadge}>{correct}/{MASTERY_GOAL}</span>}
-      </div>
-      <div style={S.cardName}>{topic.name}</div>
-      <div style={S.cardBlurb}>{topic.blurb}</div>
-      <div style={{ marginTop: "auto", paddingTop: 12 }}><Bar pct={pct} color={color} thin /></div>
-    </button>
-  );
-}
+<main>
+  <div id="view-schedule" class="view active">
+    <div id="next-up-container"></div>
+    <div id="error-container"></div>
+    <div class="filter-row" id="filter-row"></div>
+    <div id="today-bar" class="today-bar"></div>
+    <div id="schedule-list"><div class="loading-spinner">Loading matches…</div></div>
+    <div class="last-updated" id="lastUpdated"></div>
+  </div>
 
-function PracticeView({ problem, mode, activeName, reviewDone, queueLen, input, setInput, picked, setPicked, feedback, session, inputRef, onKey, onSubmit, onNext, onBack }) {
-  if (reviewDone || !problem) {
-    return (
-      <main style={S.main}>
-        <div style={S.pBar}><button className="ghost focusable" style={S.backBtn} onClick={onBack}>← Map</button><div /><div /></div>
-        <div style={{ ...S.problemCard, textAlign: "center", padding: "40px 22px" }}>
-          <div style={{ fontSize: 40 }}>🎉</div>
-          <div style={{ fontSize: 20, fontWeight: 800, marginTop: 8 }}>All misses cleared!</div>
-          <div style={{ color: "#5C7176", marginTop: 6 }}>Nothing left in the review pile. Nice work.</div>
-          <button className="primary focusable" style={{ ...S.primaryBtn, marginTop: 18 }} onClick={onBack}>Back to map</button>
-        </div>
-      </main>
-    );
-  }
-  const topic = TOPIC_MAP[problem.topicId];
-  const color = UNIT_META[topic.unit].color;
-  const answered = !!feedback;
-  return (
-    <main style={S.main}>
-      <div style={S.pBar}>
-        <button className="ghost focusable" style={S.backBtn} onClick={onBack}>← Map</button>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 12, color: "#5C7176", letterSpacing: ".04em", textTransform: "uppercase", fontWeight: 700 }}>
-            {mode === "topic" ? topic.name : activeName}{mode === "review" ? ` · ${queueLen} left` : ""}
-          </div>
-          {mode !== "topic" && <div style={{ fontSize: 13, color, fontWeight: 700, marginTop: 2 }}>{topic.name}</div>}
-        </div>
-        <div style={{ ...S.scorePill, minWidth: 54, textAlign: "right" }}>{session.correct}/{session.seen}</div>
-      </div>
+  <div id="view-groups" class="view">
+    <div class="groups-grid" id="groups-grid"><div class="loading-spinner">Loading standings…</div></div>
+  </div>
 
-      <div style={{ ...S.refresher, borderColor: color }}><span style={{ fontWeight: 700, color }}>Remember: </span>{topic.blurb}</div>
+  <div id="view-knockout" class="view">
+    <div id="knockout-list"><div class="loading-spinner">Loading bracket…</div></div>
+  </div>
 
-      <div style={S.problemCard}>
-        <div style={S.prompt}>{problem.prompt}</div>
-        {problem.type === "choice" ? (
-          <div style={S.choices}>
-            {problem.choices.map((c, i) => {
-              let extra = {};
-              if (answered) { if (i === problem.answerIndex) extra = S.choiceRight; else if (i === picked) extra = S.choiceWrong; }
-              else if (i === picked) extra = S.choiceSel;
-              return (<button key={i} className="choice focusable" style={{ ...S.choiceBtn, ...extra }} onClick={() => !answered && setPicked(i)} disabled={answered}>{c}</button>);
-            })}
-          </div>
-        ) : (
-          <input ref={inputRef} className="answer focusable" style={S.answerInput} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey} placeholder="Your answer" inputMode="text" autoComplete="off" disabled={answered} aria-label="Your answer" />
-        )}
-        {!answered ? (
-          <button className="primary focusable" style={S.primaryBtn} onClick={onSubmit}>Check</button>
-        ) : (
-          <div className="reveal" style={{ ...S.feedback, ...(feedback.correct ? S.fbRight : S.fbWrong) }}>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>{feedback.correct ? "Correct  +10 XP 🎉" : "Not quite  +2 XP"}</div>
-            {!feedback.correct && <div style={{ marginTop: 4 }}>Answer: <strong>{problem.display}</strong></div>}
-            <div style={{ marginTop: 6, color: "#33474C", lineHeight: 1.45 }}>{problem.explain}</div>
-            {!feedback.correct && mode !== "review" && <div style={{ marginTop: 6, fontSize: 12.5, color: "#8A3C22" }}>Saved to Review Misses 🎯</div>}
-            <button className="primary focusable" style={{ ...S.primaryBtn, marginTop: 14 }} onClick={onNext}>Next →</button>
-          </div>
-        )}
-      </div>
-      <div style={{ textAlign: "center", color: "#8AA0A4", fontSize: 12.5, marginTop: 14 }}>Type a number, a fraction like <code>3/4</code>, or a decimal. Press Enter to check.</div>
-    </main>
-  );
-}
+  <div id="view-teams" class="view">
+    <div id="teams-list"><div class="loading-spinner">Loading teams…</div></div>
+  </div>
+  <div id="view-pool" class="view">
+    <div class="loading-spinner">Loading pool…</div>
+  </div>
+</main>
 
-function Bar({ pct, color, thin }) {
-  return (<div style={{ ...S.barTrack, height: thin ? 7 : 9 }}><div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 99, transition: "width .4s ease" }} /></div>);
-}
+<div class="modal-overlay" id="teamModalOverlay">
+  <div class="team-modal" id="teamModal"></div>
+</div>
 
-const SAND = "#FBF6EC", INK = "#102A30", CARD = "#FFFFFF";
-const S = {
-  root: { minHeight: "100vh", background: `radial-gradient(1200px 500px at 100% -10%, #E6F3F0 0%, ${SAND} 55%)`, color: INK, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', paddingBottom: 40 },
-  header: { position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", background: "rgba(251,246,236,.82)", backdropFilter: "blur(10px)", borderBottom: "1px solid #EADFC9" },
-  logo: { width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg,#FFB740,#E8853D)", color: "#fff", display: "grid", placeItems: "center", fontSize: 22, fontWeight: 700, boxShadow: "0 6px 16px rgba(232,133,61,.32)" },
-  title: { fontSize: 19, fontWeight: 800, letterSpacing: "-.01em", lineHeight: 1 },
-  subtitle: { fontSize: 12.5, color: "#5C7176", marginTop: 3 },
-  chip: { display: "flex", alignItems: "center", gap: 5, background: CARD, border: "1px solid #EADFC9", borderRadius: 99, padding: "6px 11px", fontWeight: 800, fontSize: 13.5, color: INK },
-  band: { maxWidth: 760, margin: "16px auto 0", padding: "0 18px" },
-  bandRow: { display: "flex", justifyContent: "space-between", marginBottom: 6 },
-  bandLabel: { fontSize: 12, color: "#5C7176", fontWeight: 600 },
-  barTrack: { width: "100%", background: "#EADFC9", borderRadius: 99, overflow: "hidden" },
-  treatJar: { marginTop: 12, fontSize: 19, letterSpacing: 3, lineHeight: 1.5 },
-  main: { maxWidth: 760, margin: "0 auto", padding: "8px 18px 0" },
-  weekCard: { width: "100%", marginTop: 18, textAlign: "left", border: "none", cursor: "pointer", borderRadius: 18, padding: "20px 22px", color: "#fff", background: "linear-gradient(120deg,#0E4D64 0%,#12718E 55%,#2BAE8E 100%)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, boxShadow: "0 10px 26px rgba(14,77,100,.28)" },
-  mixKicker: { fontSize: 12, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", opacity: .85 },
-  mixTitle: { fontSize: 21, fontWeight: 800, marginTop: 3 },
-  mixSub: { fontSize: 13.5, opacity: .92, marginTop: 5, maxWidth: 470, lineHeight: 1.4 },
-  mixArrow: { fontSize: 28, fontWeight: 700, opacity: .9 },
-  ctaRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 },
-  cta: { border: "none", borderRadius: 16, padding: "16px 16px", color: "#fff", fontWeight: 800, fontSize: 15.5, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, boxShadow: "0 8px 18px rgba(16,42,48,.14)" },
-  ctaSub: { fontWeight: 600, fontSize: 12, opacity: .92 },
-  sectionTitle: { fontSize: 16.5, fontWeight: 800, letterSpacing: "-.01em" },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 },
-  card: { display: "flex", flexDirection: "column", textAlign: "left", cursor: "pointer", background: CARD, border: "1px solid #EADFC9", borderRadius: 16, padding: "15px 16px", minHeight: 134 },
-  dot: { width: 12, height: 12, borderRadius: 99, display: "inline-block" },
-  cardName: { fontSize: 15.5, fontWeight: 800, marginTop: 10, letterSpacing: "-.01em" },
-  cardBlurb: { fontSize: 12.5, color: "#5C7176", marginTop: 5, lineHeight: 1.4 },
-  countBadge: { fontSize: 12, fontWeight: 700, color: "#8AA0A4" },
-  masterBadge: { fontSize: 12, fontWeight: 800 },
-  weekTag: { fontSize: 11, fontWeight: 800, border: "1.5px solid", borderRadius: 99, padding: "2px 8px", textTransform: "uppercase", letterSpacing: ".03em" },
-  pBar: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 16, gap: 10 },
-  backBtn: { background: "transparent", border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, color: "#12718E", padding: "6px 4px" },
-  scorePill: { background: CARD, border: "1px solid #EADFC9", borderRadius: 99, padding: "6px 12px", fontWeight: 800, fontSize: 14 },
-  refresher: { marginTop: 14, background: "#fff", border: "1px solid #EADFC9", borderLeft: "4px solid", borderRadius: 12, padding: "11px 14px", fontSize: 13.5, color: "#33474C", lineHeight: 1.45 },
-  problemCard: { marginTop: 14, background: CARD, border: "1px solid #EADFC9", borderRadius: 18, padding: "26px 22px", boxShadow: "0 8px 24px rgba(16,42,48,.06)" },
-  prompt: { fontSize: 26, fontWeight: 700, textAlign: "center", lineHeight: 1.35, whiteSpace: "pre-line", letterSpacing: "-.01em", padding: "6px 0 18px" },
-  answerInput: { width: "100%", boxSizing: "border-box", fontSize: 22, fontWeight: 700, textAlign: "center", padding: "14px 12px", border: "2px solid #DCE6E4", borderRadius: 14, outline: "none", color: INK, background: "#FAFCFB" },
-  choices: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
-  choiceBtn: { fontSize: 17, fontWeight: 700, padding: "16px 10px", borderRadius: 14, border: "2px solid #DCE6E4", background: "#FAFCFB", cursor: "pointer", color: INK },
-  choiceSel: { borderColor: "#12718E", background: "#EAF5F7" },
-  choiceRight: { borderColor: "#2BAE8E", background: "#E5F6EF", color: "#0B6B4F" },
-  choiceWrong: { borderColor: "#E8653D", background: "#FBE9E3", color: "#A23A1E" },
-  primaryBtn: { width: "100%", marginTop: 18, fontSize: 17, fontWeight: 800, padding: "15px", borderRadius: 14, border: "none", cursor: "pointer", color: "#fff", background: "linear-gradient(120deg,#12718E,#2BAE8E)", boxShadow: "0 8px 18px rgba(18,113,142,.28)" },
-  feedback: { marginTop: 18, borderRadius: 14, padding: "15px 16px", fontSize: 14 },
-  fbRight: { background: "#E5F6EF", border: "1px solid #B6E3D0", color: "#0B6B4F" },
-  fbWrong: { background: "#FBEEE8", border: "1px solid #F1CDBE", color: "#8A3C22" },
-  footer: { textAlign: "center", color: "#9CAFB2", fontSize: 12, marginTop: 26 },
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const PROXY = 'https://worldcup-proxy.kevinamaya.workers.dev';
+
+// Refresh intervals
+const REFRESH_LIVE    = 30_000;   // 30s when live game active (ESPN cache is 30s)
+const REFRESH_NORMAL  = 300_000;  // 5 min otherwise
+
+// ─── FLAGS ───────────────────────────────────────────────────────────────────
+const FLAG_CODES = {
+  'Mexico':'mx','South Africa':'za','South Korea':'kr','Korea Republic':'kr',
+  'Czechia':'cz','Czech Republic':'cz','Canada':'ca',
+  'Bosnia-Herzegovina':'ba','Bosnia and Herzegovina':'ba','Qatar':'qa','Switzerland':'ch',
+  'Brazil':'br','Morocco':'ma','Haiti':'ht','Scotland':'gb-sct',
+  'United States':'us','USA':'us','Paraguay':'py','Australia':'au',
+  'Türkiye':'tr','Turkey':'tr','Germany':'de','Curaçao':'cw','Curacao':'cw',
+  'Ivory Coast':'ci',"Côte d'Ivoire":'ci','Ecuador':'ec',
+  'Netherlands':'nl','Japan':'jp','Sweden':'se','Tunisia':'tn',
+  'Belgium':'be','Egypt':'eg','Iran':'ir','New Zealand':'nz',
+  'Spain':'es','Cape Verde':'cv','Cabo Verde':'cv','Cape Verde Islands':'cv','Saudi Arabia':'sa','Uruguay':'uy',
+  'France':'fr','Senegal':'sn','Iraq':'iq','Norway':'no',
+  'Argentina':'ar','Algeria':'dz','Austria':'at','Jordan':'jo',
+  'Portugal':'pt','DR Congo':'cd','Congo DR':'cd','Uzbekistan':'uz','Colombia':'co',
+  'England':'gb-eng','Croatia':'hr','Ghana':'gh','Panama':'pa'
 };
-const CSS = `
-* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-body { margin: 0; }
-.focusable:focus-visible { outline: 3px solid #12718E; outline-offset: 2px; }
-.topiccard, .mixcard, .cta, .choice, .primary, .ghost { transition: transform .12s ease, box-shadow .12s ease, background .15s ease, border-color .15s ease; }
-@media (hover:hover){
-  .topiccard:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(16,42,48,.10); border-color:#D8C9AC; }
-  .mixcard:hover, .cta:hover { transform: translateY(-2px); }
-  .choice:hover:not(:disabled){ border-color:#9CC4CB; }
-  .primary:hover { transform: translateY(-1px); }
+
+function flag(name) {
+  const code = FLAG_CODES[name];
+  if (!code) return '⚽';
+  return `<img class="flag-img" src="https://flagcdn.com/w40/${code}.png" alt="${name}" loading="lazy">`;
 }
-.topiccard:active, .mixcard:active, .cta:active, .choice:active, .primary:active { transform: scale(.985); }
-.answer:focus { border-color:#12718E !important; background:#fff !important; }
-.reveal { animation: pop .22s ease; }
-@keyframes pop { from { opacity:0; transform: translateY(6px);} to {opacity:1; transform:none;} }
-code { background:#EFF3F1; padding:1px 5px; border-radius:5px; font-size:.92em; }
-@media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
-@media (max-width:520px){ .choice { font-size:16px !important; } }
-`;
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+// ─── TEAM → GROUP MAPPING (authoritative, from official draw) ────────────────
+const TEAM_GROUPS = {
+  'Mexico':'A','South Africa':'A','South Korea':'A','Korea Republic':'A','Czechia':'A','Czech Republic':'A',
+  'Canada':'B','Bosnia-Herzegovina':'B','Bosnia and Herzegovina':'B','Qatar':'B','Switzerland':'B',
+  'Brazil':'C','Morocco':'C','Haiti':'C','Scotland':'C',
+  'United States':'D','USA':'D','Paraguay':'D','Australia':'D','Türkiye':'D','Turkey':'D',
+  'Germany':'E','Curaçao':'E','Curacao':'E','Ivory Coast':'E',"Côte d'Ivoire":'E','Ecuador':'E',
+  'Netherlands':'F','Japan':'F','Sweden':'F','Tunisia':'F',
+  'Belgium':'G','Egypt':'G','Iran':'G','New Zealand':'G',
+  'Spain':'H','Cape Verde':'H','Cabo Verde':'H','Cape Verde Islands':'H','Saudi Arabia':'H','Uruguay':'H',
+  'France':'I','Senegal':'I','Iraq':'I','Norway':'I',
+  'Argentina':'J','Algeria':'J','Austria':'J','Jordan':'J',
+  'Portugal':'K','DR Congo':'K','Congo DR':'K','Uzbekistan':'K','Colombia':'K',
+  'England':'L','Croatia':'L','Ghana':'L','Panama':'L'
+};
 
+function groupOfTeam(name) {
+  if (!name) return null;
+  if (TEAM_GROUPS[name]) return TEAM_GROUPS[name];
+  const canon = canonName(name);
+  if (TEAM_GROUPS[canon]) return TEAM_GROUPS[canon];
+  // Last resort: strip common suffixes/prefixes ("X Islands", "Republic of X")
+  const stripped = name.replace(/\s+Islands?$/i,'').replace(/^Republic of\s+/i,'').trim();
+  return TEAM_GROUPS[stripped] || null;
+}
+
+// ─── VENUE → CITY (16 official 2026 host stadiums) ───────────────────────────
+const VENUE_CITIES = [
+  { match: /azteca|ciudad de m|mexico city/i,          city: 'Mexico City, MX' },
+  { match: /akron|guadalajara|zapopan/i,               city: 'Guadalajara, MX' },
+  { match: /bbva|monterrey/i,                          city: 'Monterrey, MX' },
+  { match: /bc place|vancouver/i,                      city: 'Vancouver, CA' },
+  { match: /bmo|toronto/i,                             city: 'Toronto, CA' },
+  { match: /lumen|seattle/i,                           city: 'Seattle, WA' },
+  { match: /levi|santa clara|san francisco/i,          city: 'SF Bay Area, CA' },
+  { match: /sofi|inglewood|los angeles/i,              city: 'Los Angeles, CA' },
+  { match: /at&t|arlington|dallas/i,                   city: 'Dallas, TX' },
+  { match: /nrg|houston/i,                             city: 'Houston, TX' },
+  { match: /arrowhead|geha|kansas/i,                   city: 'Kansas City, MO' },
+  { match: /mercedes|atlanta/i,                        city: 'Atlanta, GA' },
+  { match: /hard rock|miami/i,                         city: 'Miami, FL' },
+  { match: /gillette|foxborough|boston/i,              city: 'Boston, MA' },
+  { match: /metlife|east rutherford|new york|jersey/i, city: 'NY/NJ' },
+  { match: /lincoln financial|philadelphia/i,          city: 'Philadelphia, PA' },
+];
+
+function venueCity(venue) {
+  if (!venue) return '';
+  const hit = VENUE_CITIES.find(v => v.match.test(venue));
+  return hit ? hit.city : '';
+}
+
+// ─── HARDCODED GROUP-STAGE VENUES (API free tier omits venue data) ───────────
+// Key: alphabetically sorted canonical team pair. Each pair plays once.
+const NAME_CANON = {
+  'USA':'United States','Korea Republic':'South Korea','Czech Republic':'Czechia',
+  'Bosnia and Herzegovina':'Bosnia-Herzegovina',"Côte d'Ivoire":'Ivory Coast',
+  'Turkey':'Türkiye','Congo DR':'DR Congo','Cabo Verde':'Cape Verde','Cape Verde Islands':'Cape Verde','Curacao':'Curaçao'
+};
+function canonName(n) { return NAME_CANON[n] || n; }
+
+const STADIUMS = {
+  MEX:['Estadio Azteca','Mexico City, MX'], GDL:['Estadio Akron','Guadalajara, MX'],
+  MTY:['Estadio BBVA','Monterrey, MX'],     VAN:['BC Place','Vancouver, CA'],
+  TOR:['BMO Field','Toronto, CA'],          SEA:['Lumen Field','Seattle, WA'],
+  SF:["Levi's Stadium",'SF Bay Area, CA'],  LA:['SoFi Stadium','Los Angeles, CA'],
+  DAL:['AT&T Stadium','Dallas, TX'],        HOU:['NRG Stadium','Houston, TX'],
+  KC:['Arrowhead Stadium','Kansas City, MO'], ATL:['Mercedes-Benz Stadium','Atlanta, GA'],
+  MIA:['Hard Rock Stadium','Miami, FL'],    BOS:['Gillette Stadium','Boston, MA'],
+  NYNJ:['MetLife Stadium','NY/NJ'],         PHI:['Lincoln Financial Field','Philadelphia, PA']
+};
+
+// Stadium coordinates [lat, lon] for weather lookup. Indoor/retractable-roof
+// venues flagged so we can note the roof.
+const STADIUM_GEO = {
+  MEX:[19.3029,-99.1505,false], GDL:[20.6818,-103.4628,false],
+  MTY:[25.6693,-100.2443,false], VAN:[49.2768,-123.1119,true],
+  TOR:[43.6332,-79.4185,false],  SEA:[47.5952,-122.3316,false],
+  SF:[37.4030,-121.9700,false],  LA:[33.9535,-118.3392,true],
+  DAL:[32.7473,-97.0945,true],   HOU:[29.6847,-95.4107,true],
+  KC:[39.0489,-94.4839,false],   ATL:[33.7553,-84.4006,true],
+  MIA:[25.9580,-80.2389,false],  BOS:[42.0909,-71.2643,false],
+  NYNJ:[40.8135,-74.0745,false], PHI:[39.9008,-75.1675,false]
+};
+
+const PAIR_VENUES = {
+  // Group A
+  'Mexico|South Africa':'MEX','Czechia|South Korea':'GDL','Czechia|South Africa':'ATL',
+  'Mexico|South Korea':'GDL','Czechia|Mexico':'MEX','South Africa|South Korea':'MTY',
+  // Group B
+  'Bosnia-Herzegovina|Canada':'TOR','Qatar|Switzerland':'SF','Bosnia-Herzegovina|Switzerland':'LA',
+  'Canada|Qatar':'VAN','Canada|Switzerland':'VAN','Bosnia-Herzegovina|Qatar':'SEA',
+  // Group C
+  'Brazil|Morocco':'NYNJ','Haiti|Scotland':'BOS','Morocco|Scotland':'BOS',
+  'Brazil|Haiti':'PHI','Brazil|Scotland':'MIA','Haiti|Morocco':'ATL',
+  // Group D
+  'Paraguay|United States':'LA','Australia|Türkiye':'VAN','Australia|United States':'SEA',
+  'Paraguay|Türkiye':'SF','Türkiye|United States':'LA','Australia|Paraguay':'SF',
+  // Group E
+  'Curaçao|Germany':'HOU','Ecuador|Ivory Coast':'PHI','Germany|Ivory Coast':'TOR',
+  'Curaçao|Ecuador':'KC','Ecuador|Germany':'NYNJ','Curaçao|Ivory Coast':'PHI',
+  // Group F
+  'Japan|Netherlands':'DAL','Sweden|Tunisia':'MTY','Netherlands|Sweden':'HOU',
+  'Japan|Tunisia':'MTY','Japan|Sweden':'DAL','Netherlands|Tunisia':'KC',
+  // Group G
+  'Belgium|Egypt':'SEA','Iran|New Zealand':'LA','Belgium|Iran':'LA',
+  'Egypt|New Zealand':'VAN','Egypt|Iran':'SEA','Belgium|New Zealand':'VAN',
+  // Group H
+  'Cape Verde|Spain':'ATL','Saudi Arabia|Uruguay':'MIA','Saudi Arabia|Spain':'ATL',
+  'Cape Verde|Uruguay':'MIA','Cape Verde|Saudi Arabia':'HOU','Spain|Uruguay':'GDL',
+  // Group I
+  'France|Senegal':'NYNJ','Iraq|Norway':'BOS','France|Iraq':'PHI',
+  'Norway|Senegal':'NYNJ','France|Norway':'BOS','Iraq|Senegal':'TOR',
+  // Group J
+  'Algeria|Argentina':'KC','Austria|Jordan':'SF','Argentina|Austria':'DAL',
+  'Algeria|Jordan':'SF','Algeria|Austria':'KC','Argentina|Jordan':'DAL',
+  // Group K
+  'DR Congo|Portugal':'HOU','Colombia|Uzbekistan':'MEX','Portugal|Uzbekistan':'HOU',
+  'Colombia|DR Congo':'GDL','Colombia|Portugal':'MIA','DR Congo|Uzbekistan':'ATL',
+  // Group L
+  'Croatia|England':'DAL','Ghana|Panama':'TOR','England|Ghana':'BOS',
+  'Croatia|Panama':'TOR','England|Panama':'NYNJ','Croatia|Ghana':'PHI'
+};
+
+function lookupVenue(hn, an) {
+  const key = [canonName(hn), canonName(an)].sort().join('|');
+  const code = PAIR_VENUES[key];
+  return code ? STADIUMS[code] : null; // [stadium, city]
+}
+
+function lookupVenueCode(m) {
+  // Returns the stadium code (e.g. 'LA') for a match, group stage only
+  const key = [canonName(m.homeTeam?.name || ''), canonName(m.awayTeam?.name || '')].sort().join('|');
+  return PAIR_VENUES[key] || null;
+}
+
+
+// ─── FIFA WORLD RANKINGS (final pre-tournament, June 2026) ───────────────────
+// Source: FIFA/Coca-Cola Men's World Ranking. Static for the tournament.
+const FIFA_RANK = {
+  'Argentina':1,'Spain':2,'France':3,'England':4,'Portugal':5,'Brazil':6,
+  'Netherlands':7,'Belgium':8,'Germany':9,'Croatia':10,'Morocco':11,'Colombia':13,
+  'Mexico':14,'Uruguay':15,'United States':17,'Switzerland':18,'Japan':19,
+  'Senegal':20,'Iran':21,'Denmark':22,'Austria':23,'Ecuador':24,'Türkiye':25,
+  'Australia':26,'Canada':28,'Egypt':32,'Algeria':33,'Norway':34,'Panama':35,
+  'Sweden':37,
+  'South Korea':36,'Ivory Coast':40,'Scotland':41,'Paraguay':42,'Tunisia':43,
+  'Ghana':44,'Saudi Arabia':45,'Iraq':46,'DR Congo':47,'Qatar':48,'Czechia':49,
+  'Cape Verde':70,'Uzbekistan':57,'Jordan':62,'Bosnia-Herzegovina':74,
+  'South Africa':61,'New Zealand':86,'Curaçao':82,'Haiti':84
+};
+
+function fifaRank(name) {
+  return FIFA_RANK[name] || FIFA_RANK[canonName(name)] || null;
+}
+
+// ─── STADIUM WEATHER (Open-Meteo, no key) ────────────────────────────────────
+const weatherCache = {}; // code → {temp, code, roof, ts}
+
+function wxIcon(code, isDay) {
+  // Open-Meteo WMO weather codes → emoji
+  if (code === 0) return isDay ? '☀️' : '🌙';
+  if (code <= 2) return isDay ? '🌤️' : '☁️';
+  if (code === 3) return '☁️';
+  if (code <= 48) return '🌫️';
+  if (code <= 67) return '🌧️';
+  if (code <= 77) return '🌨️';
+  if (code <= 82) return '🌧️';
+  if (code <= 86) return '🌨️';
+  if (code <= 99) return '⛈️';
+  return '🌡️';
+}
+
+async function fetchVenueWeather(code, whenISO) {
+  const geo = STADIUM_GEO[code];
+  if (!geo) return null;
+  const [lat, lon, roof] = geo;
+  // Cache for 30 min per stadium
+  const cached = weatherCache[code];
+  if (cached && Date.now() - cached.ts < 30 * 60000) return cached;
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&hourly=temperature_2m,weather_code&temperature_unit=fahrenheit`
+      + `&timezone=auto&forecast_days=2`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const times = data.hourly?.time || [];
+    const temps = data.hourly?.temperature_2m || [];
+    const codes = data.hourly?.weather_code || [];
+    // Find the hour closest to kickoff
+    const target = new Date(whenISO).getTime();
+    let bestI = 0, bestDiff = Infinity;
+    times.forEach((t, i) => {
+      const diff = Math.abs(new Date(t).getTime() - target);
+      if (diff < bestDiff) { bestDiff = diff; bestI = i; }
+    });
+    const hour = new Date(times[bestI]).getHours();
+    const isDay = hour >= 7 && hour < 19;
+    const result = {
+      temp: Math.round(temps[bestI]),
+      wcode: codes[bestI],
+      icon: wxIcon(codes[bestI], isDay),
+      roof,
+      ts: Date.now()
+    };
+    weatherCache[code] = result;
+    return result;
+  } catch(e) { return null; }
+}
+
+// Populate weather for all match cards within 24h (called after render)
+async function loadMatchWeather() {
+  const now = Date.now();
+  const els = document.querySelectorAll('[data-wx-code][data-wx-when]');
+  for (const el of els) {
+    const code = el.getAttribute('data-wx-code');
+    const whenISO = el.getAttribute('data-wx-when');
+    if (Math.abs(new Date(whenISO) - now) > 24 * 3600 * 1000) continue;
+    const wx = await fetchVenueWeather(code, whenISO);
+    if (wx) {
+      el.innerHTML = wx.roof
+        ? `${wx.icon} ${wx.temp}°F · 🏟 roof`
+        : `${wx.icon} ${wx.temp}°F`;
+    }
+  }
+}
+
+function matchVenueText(m) {
+  let venue = m.venue || '';
+  let city = venueCity(venue);
+  if (!venue) {
+    const hc = lookupVenue(m.homeTeam?.name || '', m.awayTeam?.name || '');
+    if (hc) { venue = hc[0]; city = hc[1]; }
+  }
+  return [venue, city].filter(Boolean).join(' · ');
+}
+
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let allMatches   = [];
+let standingsMap = {}; // group letter → sorted rows
+let activeFilter = 'all';
+let scheduleSections = { past: false, future: false }; // collapsed by default
+let refreshTimer = null;
+let currentView  = 'schedule';
+let nextKickoff  = null; // for countdown
+
+// ─── TIMEZONE PREFERENCE (defaults to device timezone) ───────────────────────
+const TZ_OPTIONS = [
+  { id: 'auto',                label: 'My device' },
+  { id: 'America/Los_Angeles', label: 'Pacific' },
+  { id: 'America/Denver',      label: 'Mountain' },
+  { id: 'America/Phoenix',     label: 'Arizona' },
+  { id: 'America/Chicago',     label: 'Central' },
+  { id: 'America/New_York',    label: 'Eastern' },
+];
+
+// First-time visitors default to their device timezone; manual choice persists.
+let userTZ = localStorage.getItem('wc_tz') || 'auto';
+
+function tzLabel() {
+  // For 'auto', show the live abbreviation (e.g. "Eastern (EDT)"); else the named label
+  if (userTZ === 'auto') {
+    const abbr = tzShort();
+    return abbr ? abbr + ' (device)' : 'Device Time';
+  }
+  return (TZ_OPTIONS.find(o => o.id === userTZ)?.label || 'Pacific') + ' Time';
+}
+
+function tz() {
+  return userTZ === 'auto'
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : userTZ;
+}
+
+function tzShort() {
+  // Derive the live abbreviation, e.g. "PDT", "MDT", "EST"
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz(), timeZoneName: 'short'
+    }).formatToParts(new Date());
+    return parts.find(p => p.type === 'timeZoneName')?.value || '';
+  } catch(e) { return ''; }
+}
+
+function setTZ(id) {
+  userTZ = id;
+  localStorage.setItem('wc_tz', id);
+  document.getElementById('clockTzLabel').textContent = tzLabel();
+  applyTheme();
+  renderCurrentView();
+  updateClock();
+  if (syncCode) syncSave();
+}
+
+// ─── FAVORITES ───────────────────────────────────────────────────────────────
+let favorites = new Set(JSON.parse(localStorage.getItem('wc_favs') || '[]'));
+let syncCode  = localStorage.getItem('wc_sync_code') || '';
+
+function saveFavsLocal() {
+  localStorage.setItem('wc_favs', JSON.stringify([...favorites]));
+}
+
+function isFav(name) { return favorites.has(name); }
+
+function favMark(name) { return isFav(name) ? ' <span class="fav-star">★</span>' : ''; }
+
+async function toggleFav(name) {
+  if (favorites.has(name)) favorites.delete(name);
+  else favorites.add(name);
+  saveFavsLocal();
+  renderCurrentView();
+  if (syncCode) syncSave(); // push to cloud if sync enabled
+}
+
+// ── Cross-device sync via the Apps Script proxy ──
+async function syncSave() {
+  try {
+    await fetch(`${PROXY}?type=favsave&code=${encodeURIComponent(syncCode)}&teams=${encodeURIComponent([...favorites].join('|'))}&tz=${encodeURIComponent(userTZ)}`);
+  } catch(e) { /* silent — local copy is the source of truth */ }
+}
+
+async function syncLoad() {
+  try {
+    const res = await fetch(`${PROXY}?type=favload&code=${encodeURIComponent(syncCode)}`);
+    const data = await res.json();
+    if (data.teams && Array.isArray(data.teams)) {
+      data.teams.forEach(t => favorites.add(t));
+      saveFavsLocal();
+    }
+    if (data.tz && TZ_OPTIONS.some(o => o.id === data.tz)) {
+      userTZ = data.tz;
+      localStorage.setItem('wc_tz', userTZ);
+    }
+    syncSave(); // write the merged set back
+    renderCurrentView();
+  } catch(e) { /* ignore */ }
+}
+
+function setupSync() {
+  const code = prompt(
+    syncCode
+      ? `Sync is ON (code: ${syncCode}).\nEnter a new code, or leave blank to turn sync off.`
+      : 'Make up a sync code (e.g. kevin-wc26).\nUse the same code on your other devices to share favorites.'
+  );
+  if (code === null) return; // cancelled
+  syncCode = code.trim();
+  if (syncCode) {
+    localStorage.setItem('wc_sync_code', syncCode);
+    syncLoad();
+    alert(`Sync enabled with code "${syncCode}".\nEnter the same code on your other devices.`);
+  } else {
+    localStorage.removeItem('wc_sync_code');
+    alert('Sync turned off. Favorites stay on this device only.');
+  }
+}
+
+// ─── DARK MODE (auto: dark 8pm–7am Pacific) ──────────────────────────────────
+function applyTheme() {
+  const hour = parseInt(new Date().toLocaleString('en-US', {
+    timeZone: tz(), hour: 'numeric', hour12: false
+  }), 10);
+  const dark = (hour >= 20 || hour < 7);
+  document.body.classList.toggle('dark', dark);
+}
+
+// ─── FETCH HELPERS ────────────────────────────────────────────────────────────
+async function proxyFetch(type) {
+  const res = await fetch(`${PROXY}?type=${type}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function loadMatches() {
+  const data = await proxyFetch('matches');
+  allMatches = data.matches || [];
+}
+
+async function loadStandings() {
+  const data = await proxyFetch('standings');
+  standingsMap = {};
+  let fallbackIdx = 0;
+  const fallbackLetters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  const allRows = []; // collect every row in case we need to re-bucket
+
+  (data.standings || []).forEach(group => {
+    if (group.type && group.type !== 'TOTAL') return;
+
+    const raw = String(group.group || group.name || group.stage || '');
+    let letter = null;
+    let m = raw.match(/GROUP[_\s]*([A-L])\b/i) || raw.match(/^([A-L])$/i) || raw.match(/\b([A-L])\s*$/i);
+    if (m) letter = m[1].toUpperCase();
+    if (!letter) letter = fallbackLetters[fallbackIdx] || '?';
+    fallbackIdx++;
+
+    if (!group.table || !group.table.length) return;
+
+    const rows = group.table.map(row => ({
+      team: row.team?.name || row.team?.shortName || 'TBD',
+      mp:   row.playedGames ?? 0,
+      w:    row.won ?? 0, d: row.draw ?? 0, l: row.lost ?? 0,
+      gf:   row.goalsFor ?? 0, ga: row.goalsAgainst ?? 0,
+      gd:   row.goalDifference ?? 0,
+      pts:  row.points ?? 0,
+      pos:  row.position ?? 0
+    }));
+    standingsMap[letter] = rows;
+    allRows.push(...rows);
+  });
+
+  // VALIDATION: a real group has exactly 4 teams. If the API returned one
+  // giant table (or any group with >4 teams), re-bucket every row into its
+  // correct group using the official draw mapping.
+  const malformed = Object.values(standingsMap).some(rows => rows.length > 4);
+  if (malformed && allRows.length > 0) {
+    standingsMap = {};
+    allRows.forEach(r => {
+      const letter = groupOfTeam(r.team);
+      if (!letter) return;
+      if (!standingsMap[letter]) standingsMap[letter] = [];
+      standingsMap[letter].push(r);
+    });
+    // Sort each rebuilt group by points, GD, GF
+    Object.keys(standingsMap).forEach(letter => {
+      standingsMap[letter].sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    });
+  }
+}
+
+
+// ─── ESPN LIVE OVERLAY (real-time scores + match clock) ──────────────────────
+async function loadEspnLive() {
+  try {
+    const data = await proxyFetch('espn');
+    const events = data.events || [];
+    if (!events.length) return;
+
+    // Build lookup: sorted canonical team pair → espn live info
+    const espnMap = {};
+    events.forEach(ev => {
+      const comp = ev.competitions?.[0];
+      if (!comp) return;
+      const home = comp.competitors?.find(c => c.homeAway === 'home');
+      const away = comp.competitors?.find(c => c.homeAway === 'away');
+      if (!home || !away) return;
+      const key = [canonName(home.team?.displayName || ''), canonName(away.team?.displayName || '')].sort().join('|');
+      const st = ev.status || comp.status || {};
+      const bc = (comp.broadcasts?.[0]?.names || comp.geoBroadcasts?.map(g => g.media?.shortName) || []).filter(Boolean);
+      espnMap[key] = {
+        id: ev.id,                                   // event id for summary calls
+        state: st.type?.state,                       // 'pre' | 'in' | 'post'
+        desc: st.type?.description || '',            // 'Halftime', 'Full Time'...
+        clock: st.displayClock || '',                // "75'"
+        period: st.period || 0,
+        homeScore: parseInt(home.score, 10),
+        awayScore: parseInt(away.score, 10),
+        homeForm: home.form || '',                   // "WWWDD"
+        awayForm: away.form || '',
+        broadcast: [...new Set(bc)].slice(0,3).join(', '),
+        attendance: comp.attendance || 0,
+        venueName: comp.venue?.fullName || ''
+      };
+      // capture who advanced (knockout scoring; ESPN 'advance' handles penalties)
+      if (st.type?.state === 'post') {
+        const hAdv = home.advance === true || (home.advance === undefined && home.winner === true);
+        const aAdv = away.advance === true || (away.advance === undefined && away.winner === true);
+        espnMap[key].advanceName = hAdv ? canonName(home.team?.displayName || '')
+                                 : aAdv ? canonName(away.team?.displayName || '') : '';
+      }
+    });
+
+    // Merge into allMatches
+    allMatches.forEach(m => {
+      const key = [canonName(m.homeTeam?.name || ''), canonName(m.awayTeam?.name || '')].sort().join('|');
+      const e = espnMap[key];
+      if (!e) return;
+      // Only trust ESPN within ±1 day of the scheduled match (pairs are unique
+      // in groups; knockout rematches are months apart so this is safe)
+      if (Math.abs(new Date(m.utcDate) - Date.now()) > 36 * 3600 * 1000) return;
+
+      if (e.state === 'in') {
+        m.status = /half\s*time|halftime/i.test(e.desc) ? 'PAUSED' : 'IN_PLAY';
+      } else if (e.state === 'post') {
+        m.status = 'FINISHED';
+      }
+      if (!isNaN(e.homeScore) && !isNaN(e.awayScore) && e.state !== 'pre') {
+        m.score = m.score || {};
+        m.score.fullTime = { home: e.homeScore, away: e.awayScore };
+      }
+      m._espn = e;        // clock + ids + form + broadcast
+      m._espnId = e.id;   // shortcut for summary fetch
+    });
+  } catch(err) { /* ESPN unavailable — football-data values remain */ }
+}
+
+// ─── REFRESH LOGIC ───────────────────────────────────────────────────────────
+async function refreshAll() {
+  const statusEl = document.getElementById('apiStatus');
+  try {
+    // Fire all three fetches in parallel. Render as soon as matches land so the
+    // page isn't blocked waiting on the slowest call.
+    const matchesP   = loadMatches();
+    const standingsP = loadStandings();
+
+    await matchesP;          // first paint as soon as the schedule is ready
+    renderCurrentView();
+
+    // ESPN overlay + standings finish in the background, then re-render
+    await Promise.all([standingsP, loadEspnLive()]);
+
+    statusEl.textContent = '● Live';
+    statusEl.className = 'api-status ok';
+    document.getElementById('error-container').innerHTML = '';
+    document.getElementById('lastUpdated').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-US',{timeZone: tz(),hour:'numeric',minute:'2-digit',hour12:true}) + ' ' + tzShort();
+  } catch(e) {
+    statusEl.textContent = '✕ Offline';
+    statusEl.className = 'api-status err';
+    document.getElementById('error-container').innerHTML =
+      `<div class="error-banner">⚠️ Couldn't reach the scores API. Showing cached data. Will retry automatically.</div>`;
+  }
+
+  renderCurrentView();
+  scheduleNext();
+}
+
+function scheduleNext() {
+  clearTimeout(refreshTimer);
+  const hasLive = allMatches.some(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
+  refreshTimer = setTimeout(refreshAll, hasLive ? REFRESH_LIVE : REFRESH_NORMAL);
+}
+
+// ─── TIME UTILS ───────────────────────────────────────────────────────────────
+function formatPST(isoString) {
+  if (!isoString) return '';
+  return new Date(isoString).toLocaleTimeString('en-US',{
+    timeZone: tz(), hour:'numeric', minute:'2-digit', hour12:true
+  });
+}
+
+function formatDatePST(isoString) {
+  return new Date(isoString).toLocaleDateString('en-US',{
+    timeZone: tz(), weekday:'short', month:'short', day:'numeric'
+  });
+}
+
+function datekeyPST(isoString) {
+  return new Date(isoString).toLocaleDateString('en-US',{
+    timeZone: tz(), year:'numeric', month:'2-digit', day:'2-digit'
+  });
+}
+
+function todayKeyPST() { return datekeyPST(new Date().toISOString()); }
+
+// ─── STATUS HELPERS ───────────────────────────────────────────────────────────
+function matchStatus(m) {
+  if (m.status === 'IN_PLAY' || m.status === 'PAUSED') return 'live';
+  if (m.status === 'FINISHED') return 'completed';
+  // API can lag on flipping status to live. If kickoff has passed but the match
+  // isn't finished, treat the first ~2.5 hours as "live" so it surfaces at the top.
+  if (m.status === 'TIMED' || m.status === 'SCHEDULED' || !m.status) {
+    const start = new Date(m.utcDate).getTime();
+    const now = Date.now();
+    if (now >= start && now < start + 150 * 60000) return 'live';
+  }
+  return 'upcoming';
+}
+
+// Live match clock: returns {label, detail} based on minute/half if available
+function matchClock(m) {
+  // Prefer ESPN's real match clock when present
+  if (m._espn && m._espn.state === 'in') {
+    const e = m._espn;
+    if (/half\s*time|halftime/i.test(e.desc)) return { label: 'Half Time', detail: '' };
+    const half = e.period === 1 ? '1st Half' : e.period === 2 ? '2nd Half'
+      : e.period > 2 ? 'Extra Time' : 'Live';
+    return { label: half, detail: e.clock || '' };
+  }
+
+  // Prefer the API's own minute if present
+  const start = new Date(m.utcDate).getTime();
+  const elapsedMin = Math.floor((Date.now() - start) / 60000);
+
+  // If the API marks it paused, that's half-time
+  if (m.status === 'PAUSED') return { label: 'HALF TIME', detail: '' };
+
+  // Use API minute when available, else estimate from kickoff
+  let minute = (typeof m.minute === 'number') ? m.minute : elapsedMin;
+  if (minute < 0) minute = 0;
+
+  if (minute <= 45) return { label: `1st Half`, detail: `${minute}'` };
+  if (minute <= 47) return { label: `1st Half`, detail: `45+'` };
+  if (minute < 60)  return { label: `Half Time`, detail: '' };
+  // crude: assume ~15min break, second half starts ~60min after KO
+  const secondHalfMin = 45 + Math.max(0, minute - 60);
+  if (secondHalfMin <= 90) return { label: `2nd Half`, detail: `${secondHalfMin}'` };
+  return { label: `2nd Half`, detail: `90+'` };
+}
+
+function groupOfMatch(m) {
+  // Handles "GROUP_A", "Group A", or "A"
+  const raw = String(m.group || '');
+  const match = raw.match(/GROUP[_\s]*([A-L])\b/i) || raw.match(/^([A-L])$/i) || raw.match(/\b([A-L])\s*$/i);
+  if (match) return match[1].toUpperCase();
+  // Team-name fallback applies to group-stage matches only —
+  // knockout matches should show the round name, not a group tag
+  if (!m.stage || m.stage === 'GROUP_STAGE') {
+    return groupOfTeam(m.homeTeam?.name) || groupOfTeam(m.awayTeam?.name) || null;
+  }
+  return null;
+}
+
+// ─── RENDER SCHEDULE ─────────────────────────────────────────────────────────
+function renderSchedule() {
+  const container   = document.getElementById('schedule-list');
+  const nextUpEl    = document.getElementById('next-up-container');
+  const filterRowEl = document.getElementById('filter-row');
+
+  // Build group filter buttons + sync button
+  const groups = ['All','A','B','C','D','E','F','G','H','I','J','K','L'];
+  filterRowEl.innerHTML = groups.map(g => {
+    const key = g === 'All' ? 'all' : g;
+    return `<button class="filter-btn ${activeFilter===key?'active':''}"
+      onclick="setFilter('${key}')">${g === 'All' ? 'All' : 'Grp ' + g}</button>`;
+  }).join('')
+    + `<button class="sync-btn" onclick="setupSync()">${syncCode ? '☁ Synced' : '☁ Sync'}</button>`
+    + `<select class="filter-btn" style="appearance:auto" onchange="setTZ(this.value)">
+        ${TZ_OPTIONS.map(o => `<option value="${o.id}" ${o.id===userTZ?'selected':''}>🕐 ${o.label}</option>`).join('')}
+      </select>`;
+
+  // Filter
+  let matches = allMatches.filter(m =>
+    m.stage === 'GROUP_STAGE' || m.stage === 'LAST_32' ||
+    m.stage === 'LAST_16' || m.stage === 'QUARTER_FINALS' ||
+    m.stage === 'SEMI_FINALS' || m.stage === 'FINAL' ||
+    m.stage === 'THIRD_PLACE'
+  );
+
+  if (activeFilter !== 'all') {
+    matches = matches.filter(m => groupOfMatch(m) === activeFilter);
+  }
+
+  // Sort
+  const live      = matches.filter(m => matchStatus(m) === 'live');
+  const upcoming  = matches.filter(m => matchStatus(m) === 'upcoming')
+                           .sort((a,b) => new Date(a.utcDate)-new Date(b.utcDate));
+  const completed = matches.filter(m => matchStatus(m) === 'completed')
+                           .sort((a,b) => new Date(b.utcDate)-new Date(a.utcDate));
+
+  // Next up banner (with countdown)
+  let bannerHtml = '';
+  if (live.length > 0) {
+    const m = live[0];
+    const hn = m.homeTeam?.name || 'TBD', an = m.awayTeam?.name || 'TBD';
+    const hs = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0;
+    const as_ = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0;
+    nextKickoff = null;
+    const liveVenueTxt = matchVenueText(m);
+    const clk = matchClock(m);
+    const apiLive = (m.status === 'IN_PLAY' || m.status === 'PAUSED') || !!m._espn;
+    bannerHtml = `
+      <div class="next-up-banner" style="background:var(--live-red)">
+        <span class="next-up-label" style="color:white">🔴 ${clk.detail || 'LIVE'}</span>
+        <span class="next-up-game">${flag(hn)} ${hn} ${hs} – ${as_} ${an} ${flag(an)}</span>
+        <div class="next-up-countdown">${clk.label}${!apiLive ? ' · awaiting score from API' : ''}${liveVenueTxt ? ' · 🏟 ' + liveVenueTxt : ''}</div>
+      </div>`;
+  } else if (upcoming.length > 0) {
+    const m = upcoming[0];
+    const hn = m.homeTeam?.name || 'TBD', an = m.awayTeam?.name || 'TBD';
+    nextKickoff = new Date(m.utcDate);
+    const venueTxt = matchVenueText(m);
+    bannerHtml = `
+      <div class="next-up-banner">
+        <span class="next-up-label">Next Up</span>
+        <span class="next-up-game">${flag(hn)} ${hn} vs ${an} ${flag(an)}</span>
+        <span class="next-up-time">${formatPST(m.utcDate)} ${tzShort()}</span>
+        ${venueTxt ? `<div class="next-up-countdown">🏟 ${venueTxt}</div>` : ''}
+        <div class="next-up-countdown" id="nextCountdown"></div>
+      </div>`;
+  } else {
+    nextKickoff = null;
+  }
+
+  // ⭐ My Teams section: live or next match for each favorite
+  let myTeamsHtml = '';
+  if (favorites.size > 0 && activeFilter === 'all') {
+    // Sort favorites by soonest game: live first, then earliest kickoff,
+    // then teams with no remaining matches last
+    const favList = [...favorites].map(name => {
+      const tm = allMatches.filter(m =>
+        m.homeTeam?.name === name || m.awayTeam?.name === name);
+      const hasLive = tm.some(m => matchStatus(m) === 'live');
+      const next = tm.filter(m => matchStatus(m) === 'upcoming')
+        .sort((a,b) => new Date(a.utcDate)-new Date(b.utcDate))[0];
+      return {
+        name,
+        sortKey: hasLive ? 0 : (next ? new Date(next.utcDate).getTime() : Infinity)
+      };
+    }).sort((a,b) => a.sortKey - b.sortKey).map(f => f.name);
+
+    const rows = favList.map(name => {
+      const teamMatches = allMatches.filter(m =>
+        m.homeTeam?.name === name || m.awayTeam?.name === name);
+      const liveM = teamMatches.find(m => matchStatus(m) === 'live');
+      const nextM = teamMatches.filter(m => matchStatus(m) === 'upcoming')
+        .sort((a,b) => new Date(a.utcDate)-new Date(b.utcDate))[0];
+      let info = '', time = '';
+      if (liveM) {
+        const hs = liveM.score?.fullTime?.home ?? 0, as_ = liveM.score?.fullTime?.away ?? 0;
+        const opp = liveM.homeTeam?.name === name ? liveM.awayTeam?.name : liveM.homeTeam?.name;
+        const v = matchVenueText(liveM);
+        info = `🔴 LIVE vs ${opp}${v ? ' · 🏟 ' + v : ''}`;
+        time = `${hs} – ${as_}`;
+      } else if (nextM) {
+        const opp = nextM.homeTeam?.name === name ? nextM.awayTeam?.name : nextM.homeTeam?.name;
+        const v = matchVenueText(nextM);
+        info = `vs ${opp}${v ? ' · 🏟 ' + v : ''}`;
+        time = `${formatDatePST(nextM.utcDate)} · ${formatPST(nextM.utcDate)}`;
+      } else {
+        info = 'No upcoming matches';
+      }
+      return `<div class="my-team-row" data-team="${name.replace(/"/g,'&quot;')}">
+        <span>${flag(name)}</span>
+        <span class="my-team-name">${name}</span>
+        <span class="my-team-next">${info}</span>
+        <span class="my-team-time">${time}</span>
+      </div>`;
+    }).join('');
+    myTeamsHtml = `<div class="my-teams-section">
+      <div class="my-teams-title">⭐ My Teams</div>${rows}
+    </div>`;
+  }
+
+  nextUpEl.innerHTML = myTeamsHtml + bannerHtml;
+  updateCountdown();
+
+  // Build cards grouped by date
+  const todayK = todayKeyPST();
+
+  // Split into TODAY (all statuses) and OTHER days
+  const todayMatches = matches.filter(m => datekeyPST(m.utcDate) === todayK);
+  const otherMatches = matches.filter(m => datekeyPST(m.utcDate) !== todayK);
+
+  // Within today: chronological order (as played) — completed first, then live, then upcoming
+  const tStatus = m => matchStatus(m);
+  const todaySorted = todayMatches.slice().sort((a,b) => new Date(a.utcDate) - new Date(b.utcDate));
+
+  // Other days: future first (chronological), then past days (reverse) at the very bottom
+  const futureOther = otherMatches.filter(m => new Date(m.utcDate) > Date.now())
+                                  .sort((a,b)=>new Date(a.utcDate)-new Date(b.utcDate));
+  const pastOther   = otherMatches.filter(m => new Date(m.utcDate) <= Date.now())
+                                  .sort((a,b)=>new Date(b.utcDate)-new Date(a.utcDate));
+
+  // Count today's matches (for the header + jump button)
+  const todayCount = todayMatches.length;
+  const todayBar = document.getElementById('today-bar');
+  if (todayBar) {
+    if (todayCount > 0) {
+      const done = todayMatches.filter(m => tStatus(m) === 'completed').length;
+      const liveN = todayMatches.filter(m => tStatus(m) === 'live').length;
+      let summary = `${todayCount} match${todayCount>1?'es':''} today`;
+      if (liveN) summary += ` · ${liveN} live`;
+      if (done) summary += ` · ${done} final`;
+      todayBar.innerHTML = `<span class="today-count">📅 ${summary}</span>`;
+    } else {
+      const nextUp = futureOther[0];
+      todayBar.innerHTML = nextUp
+        ? `<span class="today-count">No matches today · next on ${formatDatePST(nextUp.utcDate)}</span>`
+        : '';
+    }
+  }
+
+  let html = '';
+
+  // ── EARLIER RESULTS (collapsible, above today, collapsed by default) ──
+  if (pastOther.length) {
+    const open = scheduleSections.past;
+    const days = new Set(pastOther.map(m => datekeyPST(m.utcDate))).size;
+    html += `<div class="collapse-header" onclick="toggleSection('past')">
+      <span>◂ Earlier Results</span>
+      <span class="collapse-meta">${pastOther.length} games · ${days} day${days>1?'s':''} ${open?'▲':'▼'}</span>
+    </div>`;
+    if (open) {
+      let lastDate = null;
+      pastOther.forEach(m => {
+        const dk = datekeyPST(m.utcDate);
+        if (dk !== lastDate) {
+          html += `<div class="date-divider"><span class="date-label">${formatDatePST(m.utcDate)}</span></div>`;
+          lastDate = dk;
+        }
+        html += renderMatchCard(m, matchStatus(m));
+      });
+    }
+  }
+
+  // ── TODAY (always expanded, pinned) ──
+  if (todaySorted.length) {
+    html += `<div class="date-divider today" id="today-divider">
+      <span class="date-label" style="color:var(--pitch)">${formatDatePST(todaySorted[0].utcDate)}</span>
+      <span class="today-pill">Today</span>
+    </div>`;
+    todaySorted.forEach(m => { html += renderMatchCard(m, matchStatus(m)); });
+  }
+
+  // ── UPCOMING (collapsible, below today, collapsed by default) ──
+  if (futureOther.length) {
+    const open = scheduleSections.future;
+    const days = new Set(futureOther.map(m => datekeyPST(m.utcDate))).size;
+    html += `<div class="collapse-header" onclick="toggleSection('future')">
+      <span>▸ Upcoming Matches</span>
+      <span class="collapse-meta">${futureOther.length} games · ${days} day${days>1?'s':''} ${open?'▲':'▼'}</span>
+    </div>`;
+    if (open) {
+      let lastDate = null;
+      futureOther.forEach(m => {
+        const dk = datekeyPST(m.utcDate);
+        if (dk !== lastDate) {
+          html += `<div class="date-divider"><span class="date-label">${formatDatePST(m.utcDate)}</span></div>`;
+          lastDate = dk;
+        }
+        html += renderMatchCard(m, matchStatus(m));
+      });
+    }
+  }
+
+  if (!html) html = `<div class="loading-spinner">No matches found.</div>`;
+  container.innerHTML = html;
+  loadMatchWeather(); // fill in weather for matches within 24h
+}
+
+function toggleSection(which) {
+  scheduleSections[which] = !scheduleSections[which];
+  renderSchedule();
+}
+
+function jumpToToday() {
+  const el = document.getElementById('today-divider');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    // No matches today — jump to the first live or upcoming card instead
+    const firstCard = document.querySelector('#schedule-list .match-card');
+    if (firstCard) firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function renderMatchCard(m, status) {
+  const hn  = m.homeTeam?.name || m.homeTeam?.shortName || 'TBD';
+  const an  = m.awayTeam?.name || m.awayTeam?.shortName || 'TBD';
+  const grp = groupOfMatch(m);
+  const grpTag = grp
+    ? `<span class="group-tag clickable" onclick="goToGroup('${grp}')">GRP ${grp} ›</span>`
+    : `<span class="group-tag">${(m.stage||'').replace(/_/g,' ')}</span>`;
+
+  // Score helper: prefer full-time, fall back to half-time
+  const ft = m.score?.fullTime || {};
+  const ht = m.score?.halfTime || {};
+  const hs  = ft.home ?? ht.home ?? 0;
+  const as_ = ft.away ?? ht.away ?? 0;
+
+  // Extra time / penalty shootout annotations
+  const pens = m.score?.penalties;
+  const dur  = m.score?.duration;
+  let endTag = 'FT';
+  let penLine = '';
+  if (dur === 'PENALTY_SHOOTOUT' && pens && pens.home != null) {
+    endTag = `${pens.home} – ${pens.away} pens`;
+  } else if (dur === 'EXTRA_TIME') {
+    endTag = 'AET';
+  }
+
+  let center = '';
+  if (status === 'live') {
+    const apiLive = (m.status === 'IN_PLAY' || m.status === 'PAUSED') || !!m._espn;
+    const clk = matchClock(m);
+    const scoreKnown = (m.score?.fullTime?.home != null) || apiLive;
+    center = `${grpTag}
+      <span class="live-badge"><span class="live-dot"></span>${clk.detail || 'LIVE'}</span>
+      <div class="score-display">${hs} – ${as_}</div>
+      <div class="match-time" style="color:var(--live-red)">${clk.label}${!scoreKnown ? ' · awaiting score' : ''}</div>`;
+  } else if (status === 'completed') {
+    center = `${grpTag}
+      <div class="score-display">${hs} – ${as_}</div>
+      <div class="match-time done">${endTag}</div>`;
+  } else {
+    center = `${grpTag}
+      <div class="vs-display">VS</div>
+      <div class="match-time">${formatPST(m.utcDate)} ${tzShort()}</div>`;
+  }
+
+  let venue = m.venue || '';
+  let city = venueCity(venue);
+  if (!venue) {
+    const hc = lookupVenue(hn, an);
+    if (hc) { venue = hc[0]; city = hc[1]; }
+  }
+  const meta = [venue ? `🏟 ${venue}` : '', city].filter(Boolean).join(' · ');
+
+  // Weather slot: only for matches within 24h (filled in async after render)
+  const wxCode = lookupVenueCode(m);
+  const within24h = Math.abs(new Date(m.utcDate) - Date.now()) <= 24 * 3600 * 1000;
+  const wxSlot = (wxCode && within24h && status !== 'completed')
+    ? `<div class="match-wx" data-wx-code="${wxCode}" data-wx-when="${m.utcDate}">⛅ …</div>`
+    : '';
+
+  // Recent form (last 5) from ESPN, shown for upcoming/live games within range
+  const homeForm = m._espn?.homeForm || '';
+  const awayForm = m._espn?.awayForm || '';
+  const formHtml = (s) => s ? `<div class="team-form">${[...s].map(ch =>
+    `<span class="form-${ch.toLowerCase()}">${ch}</span>`).join(' ')}</div>` : '';
+
+  // Broadcast channel (ESPN), shown for upcoming games
+  const bcast = m._espn?.broadcast;
+  const bcastHtml = (bcast && status === 'upcoming')
+    ? `<div class="broadcast-tag">📺 ${bcast}</div>` : '';
+
+  // Attendance (ESPN), shown for live/completed games once available
+  const att = m._espn?.attendance;
+  const attHtml = (att && att > 0 && status !== 'upcoming')
+    ? `<div class="attendance-tag">👥 ${att.toLocaleString()} fans</div>` : '';
+
+  // Match Details button (live or completed games with an ESPN id)
+  const eid = m._espnId || '';
+  const detailBtn = (eid && (status === 'live' || status === 'completed'))
+    ? `<button class="detail-btn ${status==='completed'?'done':''}"
+        onclick="showMatchDetail('${eid}','${hn.replace(/'/g,"\\'")}','${an.replace(/'/g,"\\'")}')">
+        ${status === 'live' ? '⚽ Live Match Details' : '📊 Match Details'}</button>`
+    : '';
+
+  return `
+    <div class="match-card ${status}">
+      <div class="team-block" data-team="${hn.replace(/"/g,'&quot;')}">
+        <span class="team-flag">${flag(hn)}</span>
+        <span class="team-name">${hn}${favMark(hn)}</span>
+        ${fifaRank(hn) ? `<span class="card-rank">🌍 #${fifaRank(hn)}</span>` : ''}
+        ${formHtml(homeForm)}
+      </div>
+      <div class="match-center">
+        ${center}
+        <div class="match-meta">${meta}</div>
+        ${wxSlot}
+        ${bcastHtml}
+        ${attHtml}
+        ${detailBtn}
+      </div>
+      <div class="team-block right" data-team="${an.replace(/"/g,'&quot;')}">
+        <span class="team-flag">${flag(an)}</span>
+        <span class="team-name">${an}${favMark(an)}</span>
+        ${fifaRank(an) ? `<span class="card-rank">🌍 #${fifaRank(an)}</span>` : ''}
+        ${formHtml(awayForm)}
+      </div>
+    </div>`;
+}
+
+function setFilter(f) { activeFilter = f; renderSchedule(); }
+
+// ─── RENDER GROUPS ────────────────────────────────────────────────────────────
+function computeStandingsFromMatches() {
+  // Fallback: build group tables directly from match results
+  const map = {};
+  allMatches.filter(m => m.stage === 'GROUP_STAGE').forEach(m => {
+    const letter = groupOfMatch(m);
+    if (!letter) return;
+    if (!map[letter]) map[letter] = {};
+    const hn = m.homeTeam?.name || 'TBD';
+    const an = m.awayTeam?.name || 'TBD';
+    [hn, an].forEach(t => {
+      if (!map[letter][t]) map[letter][t] = {team:t,mp:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0};
+    });
+    if (m.status === 'FINISHED' || m.status === 'IN_PLAY' || m.status === 'PAUSED') {
+      const hs = m.score?.fullTime?.home ?? m.score?.halfTime?.home;
+      const as_ = m.score?.fullTime?.away ?? m.score?.halfTime?.away;
+      if (hs == null || as_ == null) return;
+      // Only count finished matches toward the table
+      if (m.status !== 'FINISHED') return;
+      const H = map[letter][hn], A = map[letter][an];
+      H.mp++; A.mp++;
+      H.gf += hs; H.ga += as_; A.gf += as_; A.ga += hs;
+      H.gd = H.gf - H.ga; A.gd = A.gf - A.ga;
+      if (hs > as_)      { H.w++; H.pts += 3; A.l++; }
+      else if (as_ > hs) { A.w++; A.pts += 3; H.l++; }
+      else               { H.d++; A.d++; H.pts++; A.pts++; }
+    }
+  });
+  const out = {};
+  Object.keys(map).forEach(letter => {
+    out[letter] = Object.values(map[letter])
+      .sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  });
+  return out;
+}
+
+function renderGroups() {
+  const container = document.getElementById('groups-grid');
+  const letters = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+
+  // Use API standings if available; otherwise compute from match results
+  let source = standingsMap;
+  if (Object.keys(source).length === 0 && allMatches.length > 0) {
+    source = computeStandingsFromMatches();
+  }
+
+  if (Object.keys(source).length === 0) {
+    container.innerHTML = '<div class="loading-spinner">Loading standings…</div>';
+    return;
+  }
+
+  let html = '';
+
+  // ── BEST THIRD-PLACE TRACKER ──
+  // 8 of the 12 third-place teams advance to the Round of 32
+  const thirds = [];
+  letters.forEach(letter => {
+    const rows = source[letter] || [];
+    if (rows.length >= 3) thirds.push({...rows[2], grp: letter});
+  });
+  if (thirds.length >= 4) {
+    thirds.sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    html += `
+      <div class="group-card third-place-card">
+        <div class="group-header">
+          <span class="group-letter">3rd</span>
+          <span class="group-teams-preview">Best Third-Place Race — Top 8 advance to Round of 32</span>
+        </div>
+        <table class="standings-table">
+          <thead><tr>
+            <th colspan="2">Team</th>
+            <th>Grp</th><th>MP</th><th>GD</th><th>Pts</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${thirds.map((r,i) => `
+              <tr class="${i < 8 ? 'qualify-1' : ''}">
+                <td><span class="rank-num ${i < 8 ? 'q1' : ''}">${i+1}</span></td>
+                <td><div class="team-row">
+                  <span class="team-row-flag">${flag(r.team)}</span>
+                  <span class="team-row-name" data-team="${r.team.replace(/"/g,'&quot;')}">${r.team}${favMark(r.team)}</span>
+                </div></td>
+                <td>${r.grp}</td>
+                <td>${r.mp}</td>
+                <td>${r.gd >= 0 ? '+'+r.gd : r.gd}</td>
+                <td><span class="pts">${r.pts}</span></td>
+                <td class="tp-status">${i < 8 ? '✅' : '❌'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="qualify-note">
+          <span>✅ Currently advancing · ❌ Currently out · Sorted by Pts → GD → GF</span>
+        </div>
+      </div>`;
+  }
+
+  letters.forEach(letter => {
+    const rows = source[letter] || [];
+    if (!rows.length) return; // skip groups with no data
+    const preview = rows.slice(0,2).map(r=>r.team).join(' · ');
+
+    // Determine clinched status: a team has "clinched" a top-2 spot if no team
+    // below them can mathematically catch them on points by the end of the group.
+    // Each team plays 3 group games (3 pts per win).
+    const clinched = rows.map((r, i) => {
+      const gamesLeft = 3 - r.mp;
+      const maxPossible = r.pts + gamesLeft * 3;
+      // Count how many OTHER teams could still finish above or tie this team
+      let couldPass = 0;
+      rows.forEach((o, j) => {
+        if (j === i) return;
+        const oMax = o.pts + (3 - o.mp) * 3;
+        if (oMax >= r.pts) couldPass++;
+      });
+      // Clinched top-2 if at most 1 other team can reach/exceed your current points
+      const clinchedTop2 = couldPass <= 1;
+      // Clinched 1st if no other team can reach your points
+      const clinchedFirst = couldPass === 0;
+      // Eliminated if you can't reach the 2nd-place team's secured minimum
+      return { clinchedTop2, clinchedFirst };
+    });
+
+    // Group strength: average FIFA rank of the 4 teams (lower = stronger)
+    const groupTeams = Object.keys(TEAM_GROUPS).filter(t => TEAM_GROUPS[t] === letter);
+    const seen = new Set();
+    const uniqTeams = groupTeams.filter(t => {
+      const code = fifaRank(t);
+      if (!code || seen.has(code)) return false;
+      seen.add(code); return true;
+    });
+    const ranks = uniqTeams.map(t => fifaRank(t)).filter(Boolean);
+    const avgRank = ranks.length ? Math.round(ranks.reduce((a,b)=>a+b,0)/ranks.length) : null;
+
+    html += `
+      <div class="group-card">
+        <div class="group-header">
+          <span class="group-letter">${letter}</span>
+          <span class="group-teams-preview">${preview}…</span>
+          ${avgRank ? `<span class="group-strength" title="Average FIFA rank">avg #${avgRank}</span>` : ''}
+        </div>
+        <table class="standings-table">
+          <thead><tr>
+            <th colspan="2">Team</th>
+            <th>MP</th><th>W</th><th>D</th><th>L</th>
+            <th>GD</th><th>Pts</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map((r,i) => `
+              <tr class="${i===0?'qualify-1':i===1?'qualify-2':''}">
+                <td><span class="rank-num ${i===0?'q1':i===1?'q2':''}">${i+1}</span></td>
+                <td><div class="team-row">
+                  <span class="team-row-flag">${flag(r.team)}</span>
+                  <span class="team-row-name" data-team="${r.team.replace(/"/g,'&quot;')}">${r.team}${favMark(r.team)}</span>
+                  ${fifaRank(r.team) ? `<span class="rank-chip">#${fifaRank(r.team)}</span>` : ''}
+                  ${clinched[i].clinchedFirst ? '<span class="clinch-badge first">✓ WON GRP</span>'
+                    : clinched[i].clinchedTop2 ? '<span class="clinch-badge">✓ ADV</span>' : ''}
+                </div></td>
+                <td>${r.mp}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td>
+                <td>${r.gd >= 0 ? '+'+r.gd : r.gd}</td>
+                <td><span class="pts">${r.pts}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="qualify-note">
+          <span>🟢 Top 2 advance automatically · Best 3rd-place teams may also advance · 🌍 = FIFA world rank</span>
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ─── RENDER KNOCKOUT ─────────────────────────────────────────────────────────
+// ─── HARDCODED KNOCKOUT SCHEDULE (dates/times/venues — teams TBD) ─────────────
+// utc times are kickoff converted from ET (EDT = UTC-4). Stadium codes map to STADIUMS.
+const KO_SCHEDULE = {
+  LAST_32: [
+    {n:73,date:'2026-06-28',et:'15:00',v:'LA',  home:'2A',away:'2B'},
+    {n:76,date:'2026-06-29',et:'13:00',v:'HOU', home:'1C',away:'2F'},
+    {n:74,date:'2026-06-29',et:'16:30',v:'BOS', home:'1E',away:'3rd A/B/C/D/F'},
+    {n:75,date:'2026-06-29',et:'21:00',v:'MTY', home:'1F',away:'2C'},
+    {n:78,date:'2026-06-30',et:'13:00',v:'DAL', home:'2E',away:'2I'},
+    {n:77,date:'2026-06-30',et:'17:00',v:'NYNJ',home:'1I',away:'3rd C/D/F/G/H'},
+    {n:79,date:'2026-06-30',et:'21:00',v:'MEX', home:'1A',away:'3rd C/E/F/H/I'},
+    {n:80,date:'2026-07-01',et:'12:00',v:'ATL', home:'1L',away:'3rd E/H/I/J/K'},
+    {n:82,date:'2026-07-01',et:'16:00',v:'SEA', home:'1G',away:'3rd A/E/H/I/J'},
+    {n:81,date:'2026-07-01',et:'20:00',v:'SF',  home:'1D',away:'3rd B/E/F/I/J'},
+    {n:84,date:'2026-07-02',et:'15:00',v:'LA',  home:'1H',away:'2J'},
+    {n:83,date:'2026-07-02',et:'19:00',v:'TOR', home:'2K',away:'2L'},
+    {n:85,date:'2026-07-02',et:'23:00',v:'VAN', home:'1B',away:'3rd E/F/G/I/J'},
+    {n:88,date:'2026-07-03',et:'14:00',v:'DAL', home:'2D',away:'2G'},
+    {n:86,date:'2026-07-03',et:'18:00',v:'MIA', home:'1J',away:'2H'},
+    {n:87,date:'2026-07-03',et:'21:30',v:'KC',  home:'1K',away:'3rd D/E/I/J/L'},
+  ],
+  LAST_16: [
+    {n:90,date:'2026-07-04',et:'13:00',v:'HOU', home:'W 73',away:'W 75'},
+    {n:89,date:'2026-07-04',et:'17:00',v:'PHI', home:'W 74',away:'W 77'},
+    {n:91,date:'2026-07-05',et:'16:00',v:'NYNJ',home:'W 76',away:'W 78'},
+    {n:92,date:'2026-07-05',et:'20:00',v:'MEX', home:'W 79',away:'W 80'},
+    {n:93,date:'2026-07-06',et:'15:00',v:'DAL', home:'W 83',away:'W 84'},
+    {n:94,date:'2026-07-06',et:'20:00',v:'SEA', home:'W 81',away:'W 82'},
+    {n:95,date:'2026-07-07',et:'12:00',v:'ATL', home:'W 86',away:'W 88'},
+    {n:96,date:'2026-07-07',et:'16:00',v:'VAN', home:'W 85',away:'W 87'},
+  ],
+  QUARTER_FINALS: [
+    {n:97, date:'2026-07-09',et:'16:00',v:'BOS', home:'W 89',away:'W 90'},
+    {n:98, date:'2026-07-10',et:'15:00',v:'LA',  home:'W 93',away:'W 94'},
+    {n:99, date:'2026-07-11',et:'17:00',v:'MIA', home:'W 91',away:'W 92'},
+    {n:100,date:'2026-07-11',et:'21:00',v:'KC',  home:'W 95',away:'W 96'},
+  ],
+  SEMI_FINALS: [
+    {n:101,date:'2026-07-14',et:'15:00',v:'DAL', home:'W 97',away:'W 98'},
+    {n:102,date:'2026-07-15',et:'15:00',v:'ATL', home:'W 99',away:'W 100'},
+  ],
+  THIRD_PLACE: [
+    {n:103,date:'2026-07-18',et:'17:00',v:'MIA', home:'L SF1',away:'L SF2'},
+  ],
+  FINAL: [
+    {n:104,date:'2026-07-19',et:'15:00',v:'NYNJ',home:'W SF1',away:'W SF2'},
+  ],
+};
+
+function etToUtcISO(date, et) {
+  // ET in summer = EDT = UTC-4
+  const [y,mo,d] = date.split('-').map(Number);
+  const [h,mi] = et.split(':').map(Number);
+  return new Date(Date.UTC(y, mo-1, d, h+4, mi)).toISOString();
+}
+
+function renderPlaceholderKO(slot) {
+  const stad = STADIUMS[slot.v] || ['',''];
+  const iso = etToUtcISO(slot.date, slot.et);
+  const meta = [stad[0], stad[1]].filter(Boolean).join(' · ');
+  return `
+    <div class="match-card upcoming">
+      <div class="team-block">
+        <span class="team-flag">⚪</span>
+        <span class="team-name" style="color:var(--muted)">${slot.home}</span>
+      </div>
+      <div class="match-center">
+        <span class="group-tag">${slot.n ? 'MATCH ' + slot.n : 'TBD'}</span>
+        <div class="vs-display">VS</div>
+        <div class="match-time">${formatPST(iso)} ${tzShort()}</div>
+        <div class="match-meta">${formatDatePST(iso)}${meta ? ' · 🏟 ' + meta : ''}</div>
+      </div>
+      <div class="team-block right">
+        <span class="team-flag">⚪</span>
+        <span class="team-name" style="color:var(--muted)">${slot.away}</span>
+      </div>
+    </div>`;
+}
+
+function renderKnockout() {
+  const container = document.getElementById('knockout-list');
+  const stages = [
+    {key:'LAST_32',     label:'Round of 32'},
+    {key:'LAST_16',     label:'Round of 16'},
+    {key:'QUARTER_FINALS', label:'Quarterfinals'},
+    {key:'SEMI_FINALS', label:'Semifinals'},
+    {key:'THIRD_PLACE', label:'Third Place'},
+    {key:'FINAL',       label:'🏆 Final'},
+  ];
+
+  let html = '';
+  stages.forEach(({key, label}) => {
+    const matches = allMatches.filter(m => m.stage === key);
+    // A match has "real" teams only if both names map to actual countries
+    const realMatches = matches.filter(m =>
+      groupOfTeam(m.homeTeam?.name) && groupOfTeam(m.awayTeam?.name));
+
+    if (realMatches.length) {
+      // Real fixtures available from the API
+      html += `<div class="section-head"><h2>${label}</h2><span class="count">${realMatches.length} match${realMatches.length>1?'es':''}</span></div>`;
+      realMatches.sort((a,b)=>new Date(a.utcDate)-new Date(b.utcDate)).forEach(m => {
+        html += renderMatchCard(m, matchStatus(m));
+      });
+    } else if (KO_SCHEDULE[key]) {
+      // Placeholder schedule — dates/times/venues known, teams TBD
+      const slots = KO_SCHEDULE[key];
+      html += `<div class="section-head"><h2>${label}</h2><span class="count">${slots.length} match${slots.length>1?'es':''} · teams TBD</span></div>`;
+      slots.forEach(slot => { html += renderPlaceholderKO(slot); });
+    }
+  });
+
+  if (!html) html = '<div class="loading-spinner">Knockout schedule loading…</div>';
+  container.innerHTML = html;
+}
+
+// ─── TEAM DETAIL MODAL ───────────────────────────────────────────────────────
+// ─── MATCH DETAIL (goals, cards, stats from ESPN summary) ────────────────────
+async function showMatchDetail(eventId, hn, an) {
+  const overlay = document.getElementById('teamModalOverlay');
+  const modal   = document.getElementById('teamModal');
+
+  modal.innerHTML = `
+    <div class="team-modal-header">
+      <span class="team-modal-flag">⚽</span>
+      <div style="flex:1">
+        <div class="team-modal-title">${hn} vs ${an}</div>
+        <div class="team-modal-group">Match Details</div>
+      </div>
+      <button class="modal-close" onclick="closeTeamModal()">✕</button>
+    </div>
+    <div class="team-modal-body"><div class="loading-spinner">Loading match details…</div></div>`;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const data = await proxyFetch('espnsummary&event=' + eventId);
+    const body = renderMatchDetailBody(data, hn, an);
+    modal.querySelector('.team-modal-body').innerHTML = body;
+  } catch(e) {
+    modal.querySelector('.team-modal-body').innerHTML =
+      '<div class="loading-spinner">Could not load match details right now.</div>';
+  }
+}
+
+function renderMatchDetailBody(data, hn, an) {
+  let html = '';
+
+  // ── Key events: goals, cards, subs ──
+  const events = [];
+  (data.commentary || []).forEach(c => {
+    if (c.play && (c.play.type?.text || '')) {
+      // not always structured — skip generic commentary
+    }
+  });
+  // ESPN summary "keyEvents" is the cleanest source
+  const keyEvents = data.keyEvents || [];
+  keyEvents.forEach(ev => {
+    const t = ev.type?.text || '';
+    const clock = ev.clock?.displayValue || '';
+    const team = ev.team?.displayName || '';
+    const players = (ev.participants || []).map(p => p.athlete?.displayName).filter(Boolean);
+    let icon = '';
+    if (/goal/i.test(t) && !/own/i.test(t)) icon = '⚽';
+    else if (/own goal/i.test(t)) icon = '⚽ (OG)';
+    else if (/yellow/i.test(t)) icon = '🟨';
+    else if (/red/i.test(t)) icon = '🟥';
+    else if (/substitution/i.test(t)) icon = '🔄';
+    else if (/penalty/i.test(t)) icon = '🎯';
+    if (icon) {
+      events.push({ clock, icon, team, detail: players.join(', ') || t });
+    }
+  });
+
+  if (events.length) {
+    html += `<div class="section-head"><h2>Key Events</h2></div>`;
+    events.forEach(ev => {
+      html += `<div class="event-row">
+        <span class="event-clock">${ev.clock}</span>
+        <span class="event-icon">${ev.icon}</span>
+        <span class="event-detail"><b>${ev.team}</b> ${ev.detail}</span>
+      </div>`;
+    });
+  }
+
+  // ── Team statistics ──
+  const teams = data.boxscore?.teams || [];
+  if (teams.length === 2) {
+    const homeStats = {}, awayStats = {};
+    (teams[0].statistics || []).forEach(s => homeStats[s.name] = s.displayValue);
+    (teams[1].statistics || []).forEach(s => awayStats[s.name] = s.displayValue);
+    const wantStats = [
+      ['possessionPct','Possession'],
+      ['totalShots','Shots'],
+      ['shotsOnTarget','On Target'],
+      ['wonCorners','Corners'],
+      ['foulsCommitted','Fouls'],
+      ['yellowCards','Yellow Cards']
+    ];
+    const rows = wantStats.filter(([k]) => homeStats[k] != null || awayStats[k] != null);
+    if (rows.length) {
+      const t0 = teams[0].team?.displayName || hn;
+      const t1 = teams[1].team?.displayName || an;
+      html += `<div class="section-head"><h2>Match Stats</h2></div>`;
+      html += `<div class="stat-head"><span>${t0}</span><span></span><span>${t1}</span></div>`;
+      rows.forEach(([k,label]) => {
+        html += `<div class="stat-row">
+          <span class="stat-h">${homeStats[k] ?? '–'}</span>
+          <span class="stat-label">${label}</span>
+          <span class="stat-a">${awayStats[k] ?? '–'}</span>
+        </div>`;
+      });
+    }
+  }
+
+  // ── Lineups ──
+  const rosters = data.rosters || [];
+  if (rosters.length === 2) {
+    rosters.forEach(r => {
+      const starters = (r.roster || []).filter(p => p.starter);
+      if (!starters.length) return;
+      const teamName = r.team?.displayName || '';
+      const formation = r.formation || '';
+      html += `<div class="section-head"><h2>${teamName} XI</h2>${formation ? `<span class="count">${formation}</span>` : ''}</div>`;
+      html += '<div class="lineup">';
+      starters.forEach(p => {
+        const nm = p.athlete?.displayName || '';
+        const pos = p.position?.abbreviation || '';
+        html += `<div class="lineup-player"><span class="lp-pos">${pos}</span> ${nm}</div>`;
+      });
+      html += '</div>';
+    });
+  }
+
+  if (!html) html = '<div class="loading-spinner">No detailed data available yet for this match.</div>';
+  return html;
+}
+
+function showTeam(name) {
+  const overlay = document.getElementById('teamModalOverlay');
+  const modal   = document.getElementById('teamModal');
+
+  // All matches involving this team
+  const teamMatches = allMatches.filter(m =>
+    m.homeTeam?.name === name || m.awayTeam?.name === name
+  );
+
+  const completed = teamMatches.filter(m => matchStatus(m) === 'completed')
+                               .sort((a,b) => new Date(b.utcDate)-new Date(a.utcDate));
+  const live      = teamMatches.filter(m => matchStatus(m) === 'live');
+  const upcoming  = teamMatches.filter(m => matchStatus(m) === 'upcoming')
+                               .sort((a,b) => new Date(a.utcDate)-new Date(b.utcDate));
+
+  // W-D-L record from finished matches
+  let w=0,d=0,l=0,gf=0,ga=0;
+  completed.forEach(m => {
+    const isHome = m.homeTeam?.name === name;
+    const hs = m.score?.fullTime?.home ?? 0;
+    const as_ = m.score?.fullTime?.away ?? 0;
+    const my = isHome ? hs : as_, opp = isHome ? as_ : hs;
+    gf += my; ga += opp;
+    if (my > opp) w++; else if (my < opp) l++; else d++;
+  });
+
+  const grp = groupOfTeam(name);
+
+  let body = `
+    <div class="team-record-bar">
+      <div class="record-chip"><div class="num">${w}</div><div class="lbl">Wins</div></div>
+      <div class="record-chip"><div class="num">${d}</div><div class="lbl">Draws</div></div>
+      <div class="record-chip"><div class="num">${l}</div><div class="lbl">Losses</div></div>
+      <div class="record-chip"><div class="num">${gf}–${ga}</div><div class="lbl">Goals</div></div>
+    </div>
+    <a class="roster-link" href="${rosterURL(name)}" target="_blank" rel="noopener">👥 View Roster &amp; Player Bios →</a>`;
+
+  if (live.length) {
+    body += `<div class="section-head"><h2 style="color:var(--live-red)">🔴 Live Now</h2></div>`;
+    live.forEach(m => body += renderMatchCard(m, 'live'));
+  }
+
+  if (upcoming.length) {
+    body += `<div class="section-head"><h2>Upcoming</h2><span class="count">${upcoming.length} match${upcoming.length>1?'es':''}</span></div>`;
+    upcoming.forEach(m => {
+      body += `<div style="font-size:11px;color:var(--muted);margin:8px 0 4px;font-weight:600">${formatDatePST(m.utcDate)}</div>`;
+      body += renderMatchCard(m, 'upcoming');
+    });
+  }
+
+  if (completed.length) {
+    body += `<div class="section-head"><h2>Results</h2><span class="count">${completed.length} played</span></div>`;
+    completed.forEach(m => {
+      body += `<div style="font-size:11px;color:var(--muted);margin:8px 0 4px;font-weight:600">${formatDatePST(m.utcDate)}</div>`;
+      body += renderMatchCard(m, 'completed');
+    });
+  }
+
+  if (!teamMatches.length) {
+    body += `<div class="loading-spinner">No matches found for ${name}.</div>`;
+  }
+
+  modal.innerHTML = `
+    <div class="team-modal-header">
+      <span class="team-modal-flag">${flag(name)}</span>
+      <div style="flex:1">
+        <div class="team-modal-title">${name}</div>
+        ${grp ? `<div class="team-modal-group" style="cursor:pointer;text-decoration:underline" onclick="goToGroup('${grp}')">Group ${grp} →</div>` : ''}
+        ${fifaRank(name) ? `<div class="team-modal-rank">🌍 FIFA Rank #${fifaRank(name)}</div>` : ''}
+      </div>
+      <button class="fav-btn" onclick="toggleFav('${name.replace(/'/g,"\\'")}');showTeam('${name.replace(/'/g,"\\'")}')" title="Favorite">${isFav(name) ? '★' : '☆'}</button>
+      <a class="fav-btn" href="${rosterURL(name)}" target="_blank" rel="noopener" title="Roster &amp; player bios" style="font-size:16px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none">👥</a>
+      <button class="fav-btn" onclick="shareTeam('${name.replace(/'/g,"\\'")}')" title="Share" style="font-size:16px">⤴</button>
+      <button class="modal-close" onclick="closeTeamModal()">✕</button>
+    </div>
+    <div class="team-modal-body">${body}</div>`;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTeamModal() {
+  document.getElementById('teamModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Click delegation: any element with data-team opens the modal.
+// Tapping the dark backdrop closes it.
+document.addEventListener('click', (e) => {
+  const star = e.target.closest('[data-fav]');
+  if (star) { toggleFav(star.dataset.fav); return; }
+  const t = e.target.closest('[data-team]');
+  if (t) { showTeam(t.dataset.team); return; }
+  if (e.target.id === 'teamModalOverlay') closeTeamModal();
+});
+
+// ─── RENDER TEAMS ────────────────────────────────────────────────────────────
+let teamSearch = '';
+
+function getAllTeams() {
+  // Prefer real names from API matches; fall back to the official draw list
+  const names = new Set();
+  allMatches.forEach(m => {
+    if (m.homeTeam?.name && groupOfTeam(m.homeTeam.name)) names.add(m.homeTeam.name);
+    if (m.awayTeam?.name && groupOfTeam(m.awayTeam.name)) names.add(m.awayTeam.name);
+  });
+  if (names.size === 0) {
+    // Canonical list (skip alias spellings)
+    const seen = new Set();
+    Object.entries(TEAM_GROUPS).forEach(([name, grp]) => {
+      const key = grp + ':' + (FLAG_CODES[name] || name);
+      if (!seen.has(key)) { seen.add(key); names.add(name); }
+    });
+  }
+  return [...names].sort((a,b) => a.localeCompare(b));
+}
+
+function renderTeams() {
+  const container = document.getElementById('teams-list');
+  const teams = getAllTeams().filter(t =>
+    !teamSearch || t.toLowerCase().includes(teamSearch.toLowerCase()));
+
+  const tiles = teams.map(name => `
+    <div class="team-tile" data-team="${name.replace(/"/g,'&quot;')}">
+      ${flag(name)}
+      <span class="team-tile-name">${name}</span>
+      <span class="team-tile-grp">GRP ${groupOfTeam(name) || '?'}${fifaRank(name) ? ' · #' + fifaRank(name) : ''}</span>
+      <button class="tile-star ${isFav(name)?'on':''}" data-fav="${name.replace(/"/g,'&quot;')}" title="Favorite">${isFav(name)?'★':'☆'}</button>
+    </div>`).join('');
+
+  container.innerHTML = `
+    <input class="teams-search" type="search" placeholder="🔍 Search teams…"
+      value="${teamSearch.replace(/"/g,'&quot;')}"
+      oninput="teamSearch=this.value;renderTeams();this.focus();this.setSelectionRange(this.value.length,this.value.length)">
+    <div class="teams-grid">${tiles}</div>
+    ${teams.length === 0 ? '<div class="loading-spinner">No teams match your search.</div>' : ''}`;
+}
+
+// ─── FEATURE GUIDE ───────────────────────────────────────────────────────────
+function showGuide() {
+  const overlay = document.getElementById('teamModalOverlay');
+  const modal   = document.getElementById('teamModal');
+
+  modal.innerHTML = `
+    <div class="team-modal-header">
+      <span class="team-modal-flag">⚽</span>
+      <div style="flex:1">
+        <div class="team-modal-title">How This Site Works</div>
+        <div class="team-modal-group">World Cup 2026 Tracker · by Aquadoc</div>
+      </div>
+      <button class="modal-close" onclick="closeTeamModal()">✕</button>
+    </div>
+    <div class="team-modal-body">
+
+      <div class="guide-item">
+        <span class="guide-icon">🔴</span>
+        <div>
+          <div class="guide-title">Live Scores</div>
+          <div class="guide-text">Scores and standings update automatically — every minute during live games, every 5 minutes otherwise. Live matches always float to the top of the schedule.</div>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <span class="guide-icon">👆</span>
+        <div>
+          <div class="guide-title">Tap Any Team</div>
+          <div class="guide-text">Tap a team name anywhere — schedule, standings, anywhere — to see their full record, results, and upcoming matches. Tap teams inside that panel to keep exploring.</div>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <span class="guide-icon">⭐</span>
+        <div>
+          <div class="guide-title">Favorites</div>
+          <div class="guide-text">In any team's panel, tap the ☆ star to favorite them. Your teams get pinned in a "My Teams" card at the top of the schedule showing their next kickoff or live score.</div>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <span class="guide-icon">☁️</span>
+        <div>
+          <div class="guide-title">Sync Across Devices</div>
+          <div class="guide-text">Tap "☁ Sync" near the group filters and make up a code (like "smith-family"). Enter the same code on your other devices and your favorites and timezone follow you. No account needed.</div>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <span class="guide-icon">🕐</span>
+        <div>
+          <div class="guide-title">Your Timezone</div>
+          <div class="guide-text">All times default to Pacific. Use the 🕐 dropdown next to the filters to switch to Mountain, Central, Eastern, Arizona, or your device's local time — every kickoff time updates instantly.</div>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <span class="guide-icon">🥉</span>
+        <div>
+          <div class="guide-title">Third-Place Race</div>
+          <div class="guide-text">New for the 48-team format: 8 of the 12 third-place teams advance to the Round of 32. The tracker at the top of Groups & Standings ranks all 12 in real time — ✅ in, ❌ out. Watch this get wild in the final group games.</div>
+        </div>
+      </div>
+
+      <div class="guide-item">
+        <span class="guide-icon">🌙</span>
+        <div>
+          <div class="guide-title">Auto Dark Mode</div>
+          <div class="guide-text">The site switches to dark mode from 8 PM to 7 AM in your chosen timezone. Easy on the eyes for those late kickoffs.</div>
+        </div>
+      </div>
+
+    </div>`;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+// ─── SHARE ───────────────────────────────────────────────────────────────────
+async function shareSite() {
+  const data = {
+    title: 'World Cup 2026 Match Tracker',
+    text: 'Live World Cup 2026 scores, standings & schedule — by Aquadoc' + (syncCode ? `\nSync code: ${syncCode}` : ''),
+    url: window.location.href
+  };
+  try {
+    if (navigator.share) { await navigator.share(data); }
+    else { await navigator.clipboard.writeText(data.url); alert('Link copied to clipboard!'); }
+  } catch(e) { /* cancelled */ }
+}
+
+async function shareTeam(name) {
+  const data = {
+    title: `${name} — World Cup 2026`,
+    text: `Follow ${name} at the World Cup on the Match Tracker by Aquadoc`,
+    url: window.location.href
+  };
+  try {
+    if (navigator.share) { await navigator.share(data); }
+    else { await navigator.clipboard.writeText(data.url); alert('Link copied to clipboard!'); }
+  } catch(e) { /* cancelled */ }
+}
+
+// ─── ROSTER LINK (Wikipedia 2026 squads page) ────────────────────────────────
+function rosterURL(name) {
+  const anchorNames = {
+    'United States':'United_States','South Korea':'South_Korea',
+    'Bosnia-Herzegovina':'Bosnia_and_Herzegovina','Ivory Coast':'Ivory_Coast',
+    'DR Congo':'DR_Congo','Cape Verde':'Cape_Verde','Saudi Arabia':'Saudi_Arabia',
+    'New Zealand':'New_Zealand','South Africa':'South_Africa','Czechia':'Czech_Republic'
+  };
+  const anchor = anchorNames[name] || name.replace(/ /g,'_');
+  return 'https://en.wikipedia.org/wiki/2026_FIFA_World_Cup_squads#' + encodeURIComponent(anchor);
+}
+
+// ─── CROSS-NAV HELPERS ───────────────────────────────────────────────────────
+function activateTab(viewName) {
+  // Click the matching tab button so the underline + active state update
+  const tabs = document.querySelectorAll('.tab');
+  for (const t of tabs) {
+    if (t.getAttribute('onclick')?.includes(`'${viewName}'`)) { t.click(); return; }
+  }
+}
+
+function goToGroup(letter) {
+  closeTeamModal();
+  activateTab('groups');
+  // Scroll the chosen group card into view
+  setTimeout(() => {
+    const cards = document.querySelectorAll('#groups-grid .group-card');
+    for (const c of cards) {
+      const gl = c.querySelector('.group-letter');
+      if (gl && gl.textContent.trim() === letter) {
+        c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        c.style.transition = 'box-shadow 0.3s';
+        c.style.boxShadow = '0 0 0 3px var(--gold)';
+        setTimeout(() => { c.style.boxShadow = ''; }, 1600);
+        break;
+      }
+    }
+  }, 120);
+}
+
+function goToTeamSchedule(name) {
+  closeTeamModal();
+  activeFilter = (groupOfTeam(name) || 'all');
+  activateTab('schedule');
+  // The group filter narrows the schedule to that team's group;
+  // the team's own matches are highlighted via the favorites-independent flow.
+  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 120);
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function showView(v, btn) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if (btn) btn.classList.add('active');
+  currentView = v;
+  localStorage.setItem('wc_last_tab', v); // remember for next visit
+  renderCurrentView();
+  // Always start each tab from the top
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function renderCurrentView() {
+  if (currentView === 'schedule') renderSchedule();
+  else if (currentView === 'groups') renderGroups();
+  else if (currentView === 'knockout') renderKnockout();
+  else if (currentView === 'teams') renderTeams();
+  else if (currentView === 'pool') renderPool();
+}
+
+// ─── CLOCK ───────────────────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US',{
+    timeZone: tz(),hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true
+  });
+  updateCountdown();
+}
+
+function updateCountdown() {
+  const el = document.getElementById('nextCountdown');
+  if (!el || !nextKickoff) return;
+  const diff = nextKickoff - new Date();
+  if (diff <= 0) { el.textContent = 'Kicking off…'; return; }
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  if (h >= 24) {
+    const d = Math.floor(h / 24);
+    el.textContent = `⏱ Kickoff in ${d}d ${h % 24}h ${m}m`;
+  } else if (h > 0) {
+    el.textContent = `⏱ Kickoff in ${h}h ${m}m ${s}s`;
+  } else {
+    el.textContent = `⏱ Kickoff in ${m}m ${s}s`;
+  }
+}
+
+// ─── SCROLL TOP ──────────────────────────────────────────────────────────────
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scrollTop');
+  btn.style.display = window.scrollY > 300 ? 'flex' : 'none';
+});
+
+// ─── POOL MODULE (defined before INIT so globals exist for restoreLastTab) ───
+// ─── KNOCKOUT PREDICTION POOL ────────────────────────────────────────────────
+const POOL_WEIGHTS = { LAST_32:1, LAST_16:2, QUARTER_FINALS:4, SEMI_FINALS:8, THIRD_PLACE:4, FINAL:16 };
+const POOL_CHAMP_BONUS = 10;
+const POOL_ROUND_COUNT = { LAST_32:16, LAST_16:8, QUARTER_FINALS:4, SEMI_FINALS:2, THIRD_PLACE:1, FINAL:1 };
+const POOL_ROUNDS = [
+  { key:'LAST_32', label:'Round of 32' },
+  { key:'LAST_16', label:'Round of 16' },
+  { key:'QUARTER_FINALS', label:'Quarterfinals' },
+  { key:'SEMI_FINALS', label:'Semifinals' },
+  { key:'THIRD_PLACE', label:'Third Place' },
+  { key:'FINAL', label:'🏆 Final' },
+];
+
+let poolPool     = localStorage.getItem('wc_pool_pool') || '';
+let poolMe       = localStorage.getItem('wc_pool_me')   || '';
+let poolName     = localStorage.getItem('wc_pool_name') || '';
+let poolPicks    = {};      // { matchNumber: teamName }
+let poolChampion = '';
+let poolBoard    = null;    // last leaderboard payload from the Worker
+let poolSub      = 'bracket';
+let poolJoinMode = 'login';  // 'login' (personal code only) | 'signup' (full form)
+let POOL_ADV     = null;    // advancedSets() cache, rebuilt each render
+let POOL_R32FX   = {};      // { matchNumber: {home, away} } resolved R32 fixtures
+let _poolSaveT   = null;
+
+function poolEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function roundOfMatch(n){ n=+n;
+  if(n>=73&&n<=88) return 'LAST_32';
+  if(n>=89&&n<=96) return 'LAST_16';
+  if(n>=97&&n<=100) return 'QUARTER_FINALS';
+  if(n>=101&&n<=102) return 'SEMI_FINALS';
+  if(n===103) return 'THIRD_PLACE';
+  if(n===104) return 'FINAL';
+  return null;
+}
+function koSlot(n){ for(const k in KO_SCHEDULE){ const s=KO_SCHEDULE[k].find(x=>x.n===+n); if(s) return s; } return null; }
+function poolKickMs(n){ const s=koSlot(n); return s ? new Date(etToUtcISO(s.date,s.et)).getTime() : Infinity; }
+function matchLocked(n){ return Date.now() >= poolKickMs(n); }
+function poolChampLockMs(){ let min=Infinity; KO_SCHEDULE.LAST_32.forEach(s=>{ min=Math.min(min, new Date(etToUtcISO(s.date,s.et)).getTime()); }); return min; }
+function championLocked(){ return Date.now() >= poolChampLockMs(); }
+
+// Resolve a group-placement descriptor like '2A' or '1E' to an actual team via standings.
+function resolvePlacement(desc){
+  const m=/^([12])([A-L])$/.exec(desc);
+  if(m){ const rows=standingsMap[m[2]]; if(rows && rows[+m[1]-1]) return rows[+m[1]-1].team; }
+  return null; // third-place descriptors (e.g. '3rd A/B/C/D/F') resolve via the fixture itself
+}
+// Map each R32 slot (73-88) to its real fixture once the bracket is seeded.
+function r32Fixtures(){
+  const out={};
+  const fx=allMatches.filter(m=>m.stage==='LAST_32' && groupOfTeam(m.homeTeam?.name) && groupOfTeam(m.awayTeam?.name));
+  if(!fx.length) return out;
+  KO_SCHEDULE.LAST_32.forEach(slot=>{
+    const home=resolvePlacement(slot.home); if(!home) return;     // home side is always a group winner/runner-up
+    const hc=canonName(home);
+    const f=fx.find(m=>canonName(m.homeTeam.name)===hc || canonName(m.awayTeam.name)===hc);
+    if(f) out[slot.n]={ home:f.homeTeam.name, away:f.awayTeam.name };
+  });
+  return out;
+}
+
+// Candidate teams for a slot. R32 → real fixtures; later rounds → the player's own picks.
+function slotCandidates(n){ n=+n;
+  if(n>=73&&n<=88){ const f=POOL_R32FX[n]; return f ? [f.home, f.away] : null; }
+  const slot=koSlot(n); if(!slot) return null;
+  return [poolRef(slot.home), poolRef(slot.away)];
+}
+function poolRef(ref){ let m;
+  if((m=/^W (\d+)$/.exec(ref))) return poolPicks[m[1]] || null;
+  if((m=/^W SF(\d)$/.exec(ref))) return poolPicks[m[1]==='1'?'101':'102'] || null;
+  if((m=/^L SF(\d)$/.exec(ref))) return poolLoser(m[1]==='1'?'101':'102');
+  return null;
+}
+function poolLoser(n){ const c=slotCandidates(n); const w=poolPicks[n]; if(!c||!w) return null; return c[0]===w?c[1]:(c[1]===w?c[0]:null); }
+
+// After any change, drop picks that no longer match their slot's candidates (cascades downstream).
+function validateBracket(){
+  for(let n=73;n<=104;n++){
+    const p=poolPicks[n]; if(!p) continue;
+    const c=slotCandidates(n);
+    if(!c || (c[0]!==p && c[1]!==p)) delete poolPicks[n];
+  }
+}
+
+// ── results / scoring ──
+function poolWinnerOf(m){
+  const e=m._espn; if(e && e.advanceName) return e.advanceName;   // ESPN 'advance' flag — handles penalties
+  const sc=m.score||{};
+  if(sc.winner==='HOME_TEAM') return m.homeTeam?.name;
+  if(sc.winner==='AWAY_TEAM') return m.awayTeam?.name;
+  const p=sc.penalties;
+  if(p && typeof p.home==='number' && typeof p.away==='number') return p.home>p.away ? m.homeTeam?.name : m.awayTeam?.name;
+  const ft=sc.fullTime||{};
+  if(typeof ft.home==='number' && typeof ft.away==='number' && ft.home!==ft.away) return ft.home>ft.away ? m.homeTeam?.name : m.awayTeam?.name;
+  return null;
+}
+function advancedSets(){
+  const adv={LAST_32:new Set(),LAST_16:new Set(),QUARTER_FINALS:new Set(),SEMI_FINALS:new Set(),THIRD_PLACE:new Set(),FINAL:new Set()};
+  allMatches.forEach(m=>{ const st=m.stage; if(!adv[st]) return; if(m.status!=='FINISHED') return;
+    const w=poolWinnerOf(m); if(w) adv[st].add(canonName(w)); });
+  return adv;
+}
+function poolFinishedCount(stage){ return allMatches.filter(m=>m.stage===stage && m.status==='FINISHED').length; }
+function poolRoundComplete(r){ return poolFinishedCount(r) >= POOL_ROUND_COUNT[r]; }
+function poolPickResult(n){
+  const r=roundOfMatch(n); const pick=poolPicks[n];
+  if(!pick || !matchLocked(n) || !POOL_ADV) return '';
+  if(POOL_ADV[r] && POOL_ADV[r].has(canonName(pick))) return 'yes';
+  if(poolRoundComplete(r)) return 'no';
+  return '';
+}
+function poolScore(p, adv, actualChamp){
+  let pts=0, correct=0;
+  for(const n in (p.picks||{})){ const r=roundOfMatch(n); if(!r) continue;
+    if(adv[r] && adv[r].has(canonName(p.picks[n]))){ pts+=POOL_WEIGHTS[r]; correct++; } }
+  if(actualChamp && p.champion && canonName(p.champion)===canonName(actualChamp)){ pts+=POOL_CHAMP_BONUS; correct++; }
+  return { pts, correct };
+}
+
+// ── actions ──
+function poolPick(n, team){ if(matchLocked(n)) return; poolPicks[n]=team; validateBracket(); renderPool(); savePoolSoon(); }
+function poolSetChampion(v){ if(championLocked()) return; poolChampion=v; renderPool(); savePoolSoon(); }
+function poolSetSub(s){ poolSub=s; renderPool(); if(s==='leaderboard') poolLoadBoard(); }
+function poolCopyCode(){ try{ navigator.clipboard.writeText(poolMe); }catch(e){} }
+function poolLeave(){
+  ['wc_pool_pool','wc_pool_me','wc_pool_name'].forEach(k=>localStorage.removeItem(k));
+  poolPool=''; poolMe=''; poolName=''; poolPicks={}; poolChampion=''; poolBoard=null; poolSub='bracket'; poolJoinMode='login';
+  renderPool();
+}
+function savePoolSoon(){ clearTimeout(_poolSaveT); _poolSaveT=setTimeout(savePool, 700); }
+function poolPicksStr(){ return Object.keys(poolPicks).filter(n=>poolPicks[n]).map(n=>n+':'+poolPicks[n]).join('|'); }
+async function savePool(){
+  if(!poolMe) return;
+  const u=`${PROXY}?type=poolsave&pool=${encodeURIComponent(poolPool)}&me=${encodeURIComponent(poolMe)}`
+    +`&name=${encodeURIComponent(poolName)}&picks=${encodeURIComponent(poolPicksStr())}&champion=${encodeURIComponent(poolChampion)}`;
+  try{ await fetch(u); }catch(e){}
+}
+async function poolLoadBoard(){
+  if(!poolMe) return;
+  try{ const r=await fetch(`${PROXY}?type=poolboard&me=${encodeURIComponent(poolMe)}&pool=${encodeURIComponent(poolPool)}`);
+    const d=await r.json(); if(d && d.players) poolBoard=d; }catch(e){}
+  if(currentView==='pool' && poolSub==='leaderboard') renderPool();
+}
+function poolSetJoinMode(m){ poolJoinMode=m; renderPool(); }
+async function poolLoginSubmit(){
+  const me=document.getElementById('poolMeInput').value.trim();
+  if(!me){ alert('Enter your personal code.'); return; }
+  let d;
+  try{ const r=await fetch(`${PROXY}?type=poolload&me=${encodeURIComponent(me)}`); d=await r.json(); }
+  catch(e){ alert('Could not reach the pool. Try again.'); return; }
+  if(!d || !d.entry){ alert('No bracket found for that code. If you are new, tap “Sign up”.'); return; }
+  poolMe=me; poolPool='';
+  poolPicks=d.entry.picks||{}; poolChampion=d.entry.champion||''; poolName=d.entry.name||'';
+  localStorage.setItem('wc_pool_me', poolMe);
+  localStorage.setItem('wc_pool_name', poolName);
+  localStorage.removeItem('wc_pool_pool');
+  poolSub='bracket'; renderPool(); poolLoadBoard();
+}
+async function poolSignupSubmit(){
+  const pool=document.getElementById('poolCodeInput').value.trim();
+  const name=document.getElementById('poolNameInput').value.trim();
+  let me=document.getElementById('poolMeInput').value.trim();
+  if(!pool || !name){ alert('Enter the pool code and your name.'); return; }
+  if(!me) me = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + Math.random().toString(36).slice(2,6);
+  // make sure the personal code isn't already taken
+  let chk;
+  try{ const r=await fetch(`${PROXY}?type=poolload&me=${encodeURIComponent(me)}`); chk=await r.json(); }
+  catch(e){ alert('Could not reach the pool. Try again.'); return; }
+  if(chk && chk.entry){ alert('That personal code is already in use. If it is yours, tap “Log in”; otherwise pick a different code.'); return; }
+  // create the entry (Worker requires the pool code for a new entry)
+  let res;
+  try{
+    const u=`${PROXY}?type=poolsave&pool=${encodeURIComponent(pool)}&me=${encodeURIComponent(me)}&name=${encodeURIComponent(name)}&picks=&champion=`;
+    res=await (await fetch(u)).json();
+  }catch(e){ alert('Could not reach the pool. Try again.'); return; }
+  if(!res || res.error){ alert('That pool code did not work. Double-check it with whoever set up the pool.'); return; }
+  poolPool=pool; poolMe=me; poolName=name; poolPicks={}; poolChampion='';
+  localStorage.setItem('wc_pool_me', poolMe);
+  localStorage.setItem('wc_pool_name', poolName);
+  localStorage.setItem('wc_pool_pool', poolPool);
+  poolSub='bracket'; renderPool(); poolLoadBoard();
+}
+
+// ── render ──
+function poolTeamList(){
+  const s=new Set();
+  allMatches.forEach(m=>{ [m.homeTeam?.name, m.awayTeam?.name].forEach(nm=>{ if(nm && groupOfTeam(nm)) s.add(nm); }); });
+  return [...s].sort();
+}
+function poolTeamBtn(n, team, picked, locked, correct){
+  if(!team) return `<div class="pool-team tbd">TBD</div>`;
+  const cls=['pool-team']; if(picked) cls.push('picked'); if(locked) cls.push('locked');
+  if(picked && correct==='yes') cls.push('correct'); if(picked && correct==='no') cls.push('wrong');
+  const click=locked ? '' : `onclick="poolPick(${n}, this.dataset.t)"`;
+  const mark = picked && correct==='yes' ? '<span class="rk ok">✓</span>'
+             : picked && correct==='no'  ? '<span class="rk no">✗</span>' : '';
+  return `<button class="${cls.join(' ')}" data-t="${poolEsc(team)}" ${click}>`
+    + `<span class="pf">${flag(team)}</span><span class="pn">${poolEsc(team)}</span>${mark}</button>`;
+}
+function poolSlotHTML(slot){
+  const n=slot.n, cands=slotCandidates(n), pick=poolPicks[n], locked=matchLocked(n), res=poolPickResult(n);
+  const ko=new Date(etToUtcISO(slot.date, slot.et));
+  const when=ko.toLocaleString('en-US',{ timeZone: tz(), month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  let body;
+  if(!cands || (!cands[0] && !cands[1])){
+    body=`<div class="pool-tbd">${(n>=73&&n<=88) ? 'Teams set after the group stage' : 'Pick the earlier matches first'}</div>`;
+  } else {
+    const a=poolTeamBtn(n, cands[0], pick && pick===cands[0], locked, pick===cands[0]?res:'');
+    const b=poolTeamBtn(n, cands[1], pick && pick===cands[1], locked, pick===cands[1]?res:'');
+    body=`<div class="pool-pair">${a}<span class="pool-vs">v</span>${b}</div>`;
+  }
+  return `<div class="pool-slot ${locked?'locked':''}">`
+    + `<div class="pool-slot-top"><span>Match ${n}</span><span>${locked?'🔒 ':''}${when} ${tzShort()}</span></div>${body}</div>`;
+}
+function poolChampionHTML(){
+  const locked=championLocked();
+  const actual = POOL_ADV && POOL_ADV.FINAL && POOL_ADV.FINAL.size ? [...POOL_ADV.FINAL][0] : '';
+  let res='';
+  if(actual){ const ok=poolChampion && canonName(poolChampion)===canonName(actual);
+    res=`<div class="pool-champ-res ${ok?'correct':'wrong'}">Champion: ${flag(actual)} ${poolEsc(actual)}`
+      + `${poolChampion ? (ok ? ' — your pick ✓ +'+POOL_CHAMP_BONUS : ' — you picked '+poolEsc(poolChampion)+' ✗') : ''}</div>`; }
+  const opts=['<option value="">— pick a champion —</option>'].concat(
+    poolTeamList().map(t=>`<option value="${poolEsc(t)}" ${t===poolChampion?'selected':''}>${poolEsc(t)}</option>`)).join('');
+  const inner = locked
+    ? `<div class="pool-champ-locked">${poolChampion ? flag(poolChampion)+' '+poolEsc(poolChampion) : '—'}<span class="pool-lock">🔒 locked</span></div>${res}`
+    : `<select class="pool-select" onchange="poolSetChampion(this.value)">${opts}</select>`
+      + `<div class="pool-hint">Locks at the first Round-of-32 kickoff. You can change it until then.</div>`;
+  return `<div class="pool-champ"><div class="pool-champ-label">🏆 Tournament Champion<span class="pool-champ-bonus">+${POOL_CHAMP_BONUS} bonus</span></div>${inner}</div>`;
+}
+function poolBracketHTML(){
+  let html=poolChampionHTML();
+  POOL_ROUNDS.forEach(({key,label})=>{
+    const slots=KO_SCHEDULE[key]||[];
+    const wt=POOL_WEIGHTS[key];
+    html+=`<div class="pool-round-head"><h2>${label}</h2><span class="wt">${wt} pt${wt>1?'s':''} each</span></div>`;
+    slots.slice().sort((a,b)=>a.n-b.n).forEach(s=>{ html+=poolSlotHTML(s); });
+  });
+  return html;
+}
+function poolLeaderboardHTML(){
+  const adv=POOL_ADV||advancedSets();
+  const actualChamp = adv.FINAL && adv.FINAL.size ? [...adv.FINAL][0] : '';
+  let rows=[];
+  if(poolBoard && poolBoard.players){
+    rows=poolBoard.players.map(p=>{ const s=poolScore(p,adv,actualChamp); return { name:p.name, champion:p.champion, ...s }; });
+    rows.sort((a,b)=> b.pts-a.pts || b.correct-a.correct || a.name.localeCompare(b.name));
+  }
+  let html=`<div class="pool-board"><div class="pool-board-head"><h3>Leaderboard</h3>`
+    + `<button class="pool-mini-btn" onclick="poolLoadBoard()">↻ Refresh</button></div>`;
+  if(!rows.length){ return html+`<div class="pool-empty">No entries yet — be the first to lock in picks.</div></div>`; }
+  html+=`<table class="pool-lb"><thead><tr><th>#</th><th>Player</th><th>Pts</th><th>✓</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    const me = r.name===poolName ? 'me' : '';
+    const ch = r.champion ? ` <span class="lb-champ">🏆 ${flag(r.champion)}</span>` : '';
+    html+=`<tr class="${me}"><td>${i+1}</td><td>${poolEsc(r.name)}${ch}</td><td class="lb-pts">${r.pts}</td><td>${r.correct}</td></tr>`;
+  });
+  return html + `</tbody></table><div class="pool-hint">R32 1 · R16 2 · QF 4 · SF 8 · Final 16 · 3rd 4 · Champion +${POOL_CHAMP_BONUS}. Other players' picks reveal after each kickoff.</div></div>`;
+}
+function poolHeaderHTML(){
+  return `<div class="pool-hdr"><div class="pool-hdr-l">`
+    + `<span class="pool-you">👤 ${poolEsc(poolName)}</span>`
+    + `<span class="pool-code">code: <b>${poolEsc(poolMe)}</b> <button class="pool-mini-btn" onclick="poolCopyCode()">copy</button></span></div>`
+    + `<div class="pool-subtabs">`
+    + `<button class="pool-st ${poolSub==='bracket'?'active':''}" onclick="poolSetSub('bracket')">My Bracket</button>`
+    + `<button class="pool-st ${poolSub==='leaderboard'?'active':''}" onclick="poolSetSub('leaderboard')">Leaderboard</button></div>`
+    + `<button class="pool-leave" onclick="poolLeave()">leave</button></div>`;
+}
+function poolJoinHTML(){
+  if(poolJoinMode==='signup'){
+    return `<div class="pool-join"><h3>🔮 Join the Pool</h3>`
+      + `<p class="pool-join-sub">First time here? Enter the shared pool code, your name, and choose a personal code — that code is all you'll need to get back in later, even on a new device.</p>`
+      + `<label class="pool-field"><span>Pool code</span><input id="poolCodeInput" placeholder="shared family code" value="${poolEsc(poolPool)}"></label>`
+      + `<label class="pool-field"><span>Your name</span><input id="poolNameInput" placeholder="e.g. Kevin" value="${poolEsc(poolName)}"></label>`
+      + `<label class="pool-field"><span>Personal code <small>(your login — leave blank to auto-generate)</small></span><input id="poolMeInput" placeholder="optional" value="${poolEsc(poolMe)}"></label>`
+      + `<button class="pool-go" onclick="poolSignupSubmit()">Create my bracket</button>`
+      + `<div class="pool-join-note">Already signed up? <a class="pool-link" onclick="poolSetJoinMode('login')">Log in with your personal code</a></div></div>`;
+  }
+  return `<div class="pool-join"><h3>🔮 Knockout Prediction Pool</h3>`
+    + `<p class="pool-join-sub">Enter your personal code to open your bracket.</p>`
+    + `<label class="pool-field"><span>Personal code</span><input id="poolMeInput" placeholder="your code" value="${poolEsc(poolMe)}"></label>`
+    + `<button class="pool-go" onclick="poolLoginSubmit()">Open my bracket</button>`
+    + `<div class="pool-join-note">New here? <a class="pool-link" onclick="poolSetJoinMode('signup')">Sign up</a> to join the pool.</div></div>`;
+}
+function renderPool(){
+  const c=document.getElementById('view-pool');
+  if(!c) return;
+  if(!poolMe){ c.innerHTML=poolJoinHTML(); return; }
+  POOL_ADV=advancedSets();
+  POOL_R32FX=r32Fixtures();
+  validateBracket();
+  c.innerHTML = poolHeaderHTML() + (poolSub==='leaderboard' ? poolLeaderboardHTML() : poolBracketHTML());
+}
+async function poolInit(){
+  if(poolMe){
+    try{ const r=await fetch(`${PROXY}?type=poolload&me=${encodeURIComponent(poolMe)}`);
+      const d=await r.json();
+      if(d && d.entry){ poolPicks=d.entry.picks||{}; poolChampion=d.entry.champion||''; if(d.entry.name) poolName=d.entry.name; }
+    }catch(e){}
+  }
+  if(typeof currentView!=='undefined' && currentView==='pool') renderPool();
+}
+poolInit();
+
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('clockTzLabel').textContent = tzLabel();
+applyTheme();
+setInterval(applyTheme, 60000); // re-check theme each minute
+updateClock();
+setInterval(updateClock, 1000);
+refreshAll();
+if (syncCode) syncLoad(); // pull cloud favorites if sync is on
+
+// Live minute ticker: while a match is live and the schedule tab is showing,
+// re-render every 20s so the clock label (1st Half 23', etc.) advances between
+// the full data refreshes.
+setInterval(() => {
+  const anyLive = allMatches.some(m => matchStatus(m) === 'live');
+  if (anyLive && currentView === 'schedule') renderSchedule();
+}, 20000);
+
+// Restore the last tab the user was on (defaults to schedule)
+(function restoreLastTab() {
+  const last = localStorage.getItem('wc_last_tab');
+  if (last && last !== 'schedule') {
+    if (last === 'pool') { showView('pool', null); return; }
+    const tabs = document.querySelectorAll('.tab');
+    for (const t of tabs) {
+      if (t.getAttribute('onclick')?.includes(`'${last}'`)) { t.click(); break; }
+    }
+  }
+})();
 </script>
 </body>
 </html>
