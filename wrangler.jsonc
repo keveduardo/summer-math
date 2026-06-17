@@ -13,6 +13,6 @@
   // Cross-device progress storage.
   // Create a KV namespace in the dashboard, then paste its ID below.
   "kv_namespaces": [
-    { "binding": "BEACH_MATH_KV", "id": "PASTE_KV_NAMESPACE_ID_HERE" }
+    { "binding": "BEACH_MATH_KV", "id": "79610e8128904ad48a65270b7bbf9e89" }
   ]
 }
