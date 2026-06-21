@@ -321,6 +321,7 @@ const SKINS = ["#F8D7C0", "#F1C39E", "#D99E73", "#B97A4E", "#8C5A33", "#5E3A1E"]
 const HAIR_COLORS = ["#2B2620", "#5B3A1E", "#A6662E", "#E0B23C", "#BFC2C7", "#EDE6D6"];
 const HAIR_STYLES = ["short", "buzz", "curly", "long", "afro", "bald"];
 const FACES = ["smile", "grin", "cool", "focused"];
+const BODY_TYPES = ["Boy", "Girl"];
 
 /* 48 teams of the 2026 FIFA World Cup. Colors/patterns are stylized approximations of
    each nation's home kit (pattern: solid | vstripes | checkers | halves | sash). */
@@ -395,7 +396,7 @@ function logEvent(payload) {
 
 const dayStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
-const DEFAULT_AVATAR = { skin: 0, hair: 0, hairColor: 0, face: 0 };
+const DEFAULT_AVATAR = { skin: 0, hair: 0, hairColor: 0, face: 0, body: 0 };
 const DEFAULT_KIT = { pieces: [], closet: [], team: null, tokens: 0, milestones: [], lastPrizeDay: "", lastUnlock: null };
 const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {}, queue: [], avatar: { ...DEFAULT_AVATAR }, kit: { ...DEFAULT_KIT } };
 /* Deep-fills avatar/kit so progress saved before this feature (or from KV) never has
@@ -519,6 +520,7 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
   const hairC = HAIR_COLORS[avatar.hairColor % HAIR_COLORS.length];
   const hair = HAIR_STYLES[avatar.hair % HAIR_STYLES.length];
   const face = FACES[avatar.face % FACES.length];
+  const isGirl = (avatar.body || 0) === 1;
   const has = (id) => (kit.pieces || []).includes(id);
   const team = kit.team ? TEAM_MAP[kit.team] : null;
   const jersey = team || { pattern: "solid", primary: "#E7ECEA", secondary: "#CFD8D5", accent: "#9FB0AD" };
@@ -576,7 +578,11 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
         {hair === "short" && <path d="M34 38 q0 -28 26 -28 q26 0 26 28 q-10 -12 -26 -12 q-16 0 -26 12 z" fill={hairC} />}
         {hair === "buzz" && <path d="M36 36 q0 -26 24 -26 q24 0 24 26 q-12 -8 -24 -8 q-12 0 -24 8 z" fill={hairC} opacity="0.92" />}
         {hair === "curly" && <path d="M33 36 q-2 -10 6 -14 q2 -10 12 -10 q9 -6 18 0 q10 0 12 10 q8 4 6 14 q-8 -8 -18 -8 q-6 -4 -12 0 q-12 -2 -24 8 z" fill={hairC} />}
-        {hair === "long" && <g><path d="M32 40 q0 -30 28 -30 q28 0 28 30 l0 22 q-6 -6 -6 -18 q-10 -10 -22 -10 q-12 0 -22 10 q0 12 -6 18 z" fill={hairC} /></g>}
+        {hair === "long" && <g fill={hairC}>
+          <path d="M31 39 q-5 31 -1 59 q1 8 8 7 q5 -1 4 -9 q-4 -23 1 -43 z" />
+          <path d="M89 39 q5 31 1 59 q-1 8 -8 7 q-5 -1 -4 -9 q4 -23 -1 -43 z" />
+          <path d="M33 41 q0 -33 27 -33 q27 0 27 33 q-11 -13 -27 -13 q-16 0 -27 13 z" />
+        </g>}
         {hair === "afro" && <circle cx="60" cy="24" r="24" fill={hairC} />}
         {hair === "bald" && <path d="M40 26 q6 -10 20 -10 q14 0 20 10 q-10 -6 -20 -6 q-10 0 -20 6 z" fill="rgba(255,255,255,.18)" />}
         {/* face */}
@@ -592,6 +598,11 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
                 ? <path d="M52 55 h16" stroke="#7A4A39" strokeWidth="2.6" strokeLinecap="round" fill="none" />
                 : <path d="M50 53 q10 7 20 0" fill="none" stroke="#7A4A39" strokeWidth="2.6" strokeLinecap="round" />}
             </g>}
+        {/* eyelashes (Girl) */}
+        {isGirl && face !== "cool" && <g stroke="#3A2A22" strokeWidth="1.5" strokeLinecap="round" fill="none">
+          <path d="M46 40 q-3 -2 -6 -1" /><path d="M48 39 q-2 -2 -4 -2" />
+          <path d="M74 40 q3 -2 6 -1" /><path d="M72 39 q2 -2 4 -2" />
+        </g>}
         {/* celebration trophy */}
         {pose === "celebrate" && (kit.milestones || []).includes(30) && <text x="96" y="60" fontSize="18">🏆</text>}
       </g>
@@ -661,6 +672,7 @@ function LockerView({ progress, onBack, onAvatar, onClaim, onEquip }) {
 
       <div style={S.lockerCard}>
         <div style={S.lockerH}>Customize your player</div>
+        <div style={S.lockerRow}><span style={S.lockerLabel}>Player</span><Chips items={BODY_TYPES} value={avatar.body || 0} onPick={(i) => onAvatar("body", i)} /></div>
         <div style={S.lockerRow}><span style={S.lockerLabel}>Skin</span><Swatches colors={SKINS} value={avatar.skin} onPick={(i) => onAvatar("skin", i)} /></div>
         <div style={S.lockerRow}><span style={S.lockerLabel}>Hair color</span><Swatches colors={HAIR_COLORS} value={avatar.hairColor} onPick={(i) => onAvatar("hairColor", i)} /></div>
         <div style={S.lockerRow}><span style={S.lockerLabel}>Hair style</span><Chips items={HAIR_STYLES} value={avatar.hair} onPick={(i) => onAvatar("hair", i)} /></div>
