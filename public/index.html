@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#FBF6EC" />
 <title>Beach Math</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" integrity="sha384-aGlMNK3U/x0wl4lEH5jD1PGhJlX9hApuPmIiA5gtiYCOQ1J8ejIdC0btaU/TMoBD" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -319,7 +319,8 @@ function streakMilestones(streak) {
 /* Avatar customization palettes (indices stored in progress.avatar). */
 const SKINS = ["#F8D7C0", "#F1C39E", "#D99E73", "#B97A4E", "#8C5A33", "#5E3A1E"];
 const HAIR_COLORS = ["#2B2620", "#5B3A1E", "#A6662E", "#E0B23C", "#BFC2C7", "#EDE6D6"];
-const HAIR_STYLES = ["short", "buzz", "curly", "long", "afro", "bald"];
+// Order matters: indices are persisted, so new styles are appended, never inserted.
+const HAIR_STYLES = ["short", "buzz", "curly", "long", "afro", "bald", "wavy", "ponytail", "bun", "braids"];
 const FACES = ["smile", "grin", "cool", "focused"];
 const BODY_TYPES = ["Boy", "Girl"];
 
@@ -579,12 +580,30 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
         {hair === "buzz" && <path d="M36 36 q0 -26 24 -26 q24 0 24 26 q-12 -8 -24 -8 q-12 0 -24 8 z" fill={hairC} opacity="0.92" />}
         {hair === "curly" && <path d="M33 36 q-2 -10 6 -14 q2 -10 12 -10 q9 -6 18 0 q10 0 12 10 q8 4 6 14 q-8 -8 -18 -8 q-6 -4 -12 0 q-12 -2 -24 8 z" fill={hairC} />}
         {hair === "long" && <g fill={hairC}>
-          <path d="M31 39 q-5 31 -1 59 q1 8 8 7 q5 -1 4 -9 q-4 -23 1 -43 z" />
-          <path d="M89 39 q5 31 1 59 q-1 8 -8 7 q-5 -1 -4 -9 q4 -23 -1 -43 z" />
+          <path d="M32 42 q-3 20 0 36 q1 6 7 5 q4 -1 3 -7 q-3 -15 1 -30 z" />
+          <path d="M88 42 q3 20 0 36 q-1 6 -7 5 q-4 -1 -3 -7 q3 -15 -1 -30 z" />
           <path d="M33 41 q0 -33 27 -33 q27 0 27 33 q-11 -13 -27 -13 q-16 0 -27 13 z" />
         </g>}
         {hair === "afro" && <circle cx="60" cy="24" r="24" fill={hairC} />}
         {hair === "bald" && <path d="M40 26 q6 -10 20 -10 q14 0 20 10 q-10 -6 -20 -6 q-10 0 -20 6 z" fill="rgba(255,255,255,.18)" />}
+        {hair === "wavy" && <g fill={hairC}>
+          <path d="M31 42 q-4 20 -1 36 q4 -4 7 0 q3 4 7 0 q1 -3 0 -6 q-4 -16 0 -30 z" />
+          <path d="M89 42 q4 20 1 36 q-4 -4 -7 0 q-3 4 -7 0 q-1 -3 0 -6 q4 -16 0 -30 z" />
+          <path d="M32 40 q2 -32 28 -32 q26 0 28 32 q-7 -7 -14 -9 q-7 6 -14 2 q-7 4 -14 -2 q-7 2 -14 9 z" />
+        </g>}
+        {hair === "ponytail" && <g fill={hairC}>
+          <path d="M34 38 q0 -30 26 -30 q26 0 26 30 q-10 -12 -26 -12 q-16 0 -26 12 z" />
+          <path d="M83 24 q18 0 19 18 q1 18 -10 30 q1 -11 -1 -21 q-2 -13 -12 -19 z" />
+        </g>}
+        {hair === "bun" && <g fill={hairC}>
+          <circle cx="60" cy="9" r="9" />
+          <path d="M34 38 q0 -30 26 -30 q26 0 26 30 q-10 -12 -26 -12 q-16 0 -26 12 z" />
+        </g>}
+        {hair === "braids" && <g fill={hairC}>
+          <path d="M34 38 q0 -30 26 -30 q26 0 26 30 q-10 -12 -26 -12 q-16 0 -26 12 z" />
+          <g><circle cx="31" cy="50" r="6" /><circle cx="30" cy="60" r="5.5" /><circle cx="31" cy="70" r="5" /><circle cx="30" cy="79" r="4.5" /></g>
+          <g><circle cx="89" cy="50" r="6" /><circle cx="90" cy="60" r="5.5" /><circle cx="89" cy="70" r="5" /><circle cx="90" cy="79" r="4.5" /></g>
+        </g>}
         {/* face */}
         {face === "cool"
           ? <g><rect x="42" y="38" width="36" height="9" rx="4" fill="#23272B" /><path d="M50 54 q10 8 20 0" fill="none" stroke="#7A4A39" strokeWidth="2.6" strokeLinecap="round" /></g>

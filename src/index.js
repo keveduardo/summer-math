@@ -65,6 +65,17 @@ async function handleApi(request, env) {
   try { USERS = JSON.parse(env.USERS_JSON || "{}"); } catch (e) { USERS = {}; }
 
   if (path === "/api/login" && request.method === "POST") {
+    // Soft rate limit: cap login attempts per IP to slow code-word brute force.
+    // Fails open if KV is unavailable so real sign-ins are never blocked by errors.
+    if (env.BEACH_MATH_KV) {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const rlKey = "rl:login:" + ip;
+      try {
+        const cur = parseInt((await env.BEACH_MATH_KV.get(rlKey)) || "0", 10) || 0;
+        if (cur >= 10) return json({ error: "too many attempts, try again later" }, 429);
+        await env.BEACH_MATH_KV.put(rlKey, String(cur + 1), { expirationTtl: 600 });
+      } catch (e) {}
+    }
     let code = "";
     try { const b = await request.json(); code = String(b.code || "").trim().toLowerCase(); } catch (e) {}
     const u = USERS[code];
@@ -125,11 +136,29 @@ async function handleApi(request, env) {
   return json({ error: "not found" }, 404);
 }
 
+// Adds baseline hardening headers to every response. No CSP: the app loads CDN
+// scripts and transpiles JSX in-browser via Babel (eval), which a strict CSP would break.
+function withSecurityHeaders(res) {
+  const r = new Response(res.body, res);
+  r.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  r.headers.set("X-Content-Type-Options", "nosniff");
+  r.headers.set("X-Frame-Options", "DENY");
+  r.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  return r;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/api/")) return handleApi(request, env);
-    // everything else: serve the static site from /public
-    return env.ASSETS.fetch(request);
+    // Force HTTPS in production (defence in depth alongside Cloudflare "Always Use
+    // HTTPS"). Skip localhost so `wrangler dev` (plain http) still works.
+    if (url.protocol === "http:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
+      url.protocol = "https:";
+      return Response.redirect(url.toString(), 301);
+    }
+    const res = url.pathname.startsWith("/api/")
+      ? await handleApi(request, env)
+      : await env.ASSETS.fetch(request); // everything else: static site from /public
+    return withSecurityHeaders(res);
   },
 };
