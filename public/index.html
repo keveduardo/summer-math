@@ -176,12 +176,11 @@ function genExpressions(level = 2) {
     const arr = shuffle([...opts].slice(0, 4));
     return { type: "choice", prompt: `Simplify:   ${a}(x + ${b})`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `Distribute: ${a}·x + ${a}·${b} = ${correct}.` };
   }
-  if (level === 3) {
-    const a = rnd(2, 5), b = rnd(2, 7), c = rnd(2, 5), d = rnd(2, 7);
-    const coef = a + c, con = a * b + c * d; const correct = `${coef}x + ${con}`;
-    const opts = new Set([correct]); opts.add(`${coef}x + ${a * b + d}`); opts.add(`${a + c + 1}x + ${con}`); opts.add(`${coef}x + ${con + c}`);
+  if (level === 3) { // factor a linear expression: ax + ab -> a(x + b)
+    const a = rnd(2, 6), b = rnd(2, 9); const term = a * b; const correct = `${a}(x + ${b})`;
+    const opts = new Set([correct]); opts.add(`${a}(x + ${b + 1})`); opts.add(`${a}(x + ${term})`); opts.add(`x + ${term}`);
     const arr = shuffle([...opts].slice(0, 4));
-    return { type: "choice", prompt: `Simplify:   ${a}(x + ${b}) + ${c}(x + ${d})`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `${a}x+${a * b} and ${c}x+${c * d} → combine → ${correct}.` };
+    return { type: "choice", prompt: `Factor:   ${a}x + ${term}`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `The GCF is ${a}: ${a}x + ${term} = ${a}(x + ${b}).` };
   }
   const a = rnd(2, 6), b = rnd(2, 9), c = rnd(1, 6);
   const coef = a + c, con = a * b; const correct = `${coef}x + ${con}`;
@@ -192,22 +191,34 @@ function genExpressions(level = 2) {
 }
 function genOneStepEq(level = 2) {
   level = clampLvl(level, 4);
-  if (level === 4) { // word problem
-    const x = rnd(2, 20), add = rnd(2, 15); const total = x + add;
-    return { type: "numeric", prompt: `A team scored ${total} goals — ${add} more than last season. How many did they score last season? (solve x + ${add} = ${total})`, value: x, tol: 0.011, display: `x = ${x}`, explain: `x = ${total} − ${add} = ${x}.` };
+  if (level === 3) { // two-step: ax + b = c
+    const a = rnd(2, 9), x = rnd(-6, 9), b = rnd(-12, 12) || 4; const c = a * x + b;
+    const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
+    return { type: "numeric", prompt: `Solve:   ${a}x ${bb} = ${c}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `${a}x = ${c} ${b < 0 ? "+" : "−"} ${Math.abs(b)} = ${c - b}; x = ${c - b} ÷ ${a} = ${x}.` };
+  }
+  if (level === 4) { // two-step word problem
+    const a = rnd(2, 6), x = rnd(2, 12), b = rnd(2, 20); const c = a * x + b;
+    return { type: "numeric", prompt: `A taxi costs $${b} plus $${a} per mile. A ride cost $${c}. How many miles? (solve ${a}x + ${b} = ${c})`, value: x, tol: 0.011, display: `x = ${x}`, explain: `${c} − ${b} = ${c - b}; ${c - b} ÷ ${a} = ${x} miles.` };
   }
   const t = pick(level === 1 ? ["add", "sub"] : ["add", "sub", "mul", "div"]);
-  const hi = level >= 3 ? 30 : 20, bhi = level >= 3 ? 20 : 15, ahi = level >= 3 ? 12 : 9;
-  if (t === "add") { const x = rnd(-12, hi), b = rnd(1, bhi); return { type: "numeric", prompt: `Solve:   x + ${b} = ${x + b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Subtract ${b}: x = ${x + b} − ${b} = ${x}.` }; }
-  if (t === "sub") { const x = rnd(-12, hi), b = rnd(1, bhi); return { type: "numeric", prompt: `Solve:   x − ${b} = ${x - b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Add ${b}: x = ${x - b} + ${b} = ${x}.` }; }
-  if (t === "mul") { const a = rnd(2, ahi), x = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   ${a}x = ${a * x}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Divide by ${a}: x = ${a * x} ÷ ${a} = ${x}.` }; }
-  const a = rnd(2, ahi), q = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   x ÷ ${a} = ${q}`, value: q * a, tol: 0.011, display: `x = ${q * a}`, explain: `Multiply by ${a}: x = ${q} × ${a} = ${q * a}.` };
+  if (t === "add") { const x = rnd(-12, 20), b = rnd(1, 15); return { type: "numeric", prompt: `Solve:   x + ${b} = ${x + b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Subtract ${b}: x = ${x + b} − ${b} = ${x}.` }; }
+  if (t === "sub") { const x = rnd(-12, 20), b = rnd(1, 15); return { type: "numeric", prompt: `Solve:   x − ${b} = ${x - b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Add ${b}: x = ${x - b} + ${b} = ${x}.` }; }
+  if (t === "mul") { const a = rnd(2, 9), x = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   ${a}x = ${a * x}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Divide by ${a}: x = ${a * x} ÷ ${a} = ${x}.` }; }
+  const a = rnd(2, 9), q = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   x ÷ ${a} = ${q}`, value: q * a, tol: 0.011, display: `x = ${q * a}`, explain: `Multiply by ${a}: x = ${q} × ${a} = ${q * a}.` };
 }
 function genOneStepIneq(level = 2) {
-  level = clampLvl(level, 3);
+  level = clampLvl(level, 4);
   const op = pick(["<", ">", "≤", "≥"]);
   const flip = { "<": ">", ">": "<", "≤": "≥", "≥": "≤" };
-  const t = pick(level === 1 ? ["add", "sub"] : level === 2 ? ["add", "sub", "pos"] : ["pos", "neg", "neg"]);
+  if (level === 3) { // two-step, positive coefficient: ax + b ⋛ c
+    const a = rnd(2, 6), x = rnd(-5, 8), b = rnd(-10, 10) || 3; const c = a * x + b; const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
+    return { type: "inequality", op, value: x, tol: 0.011, prompt: `Solve for x:   ${a}x ${bb} ${op} ${c}`, display: `x ${op} ${x}`, explain: `Subtract ${b}, then divide by ${a} (positive — keep the sign) → x ${op} ${x}.` };
+  }
+  if (level === 4) { // two-step, negative coefficient: dividing flips the sign
+    const a = rnd(2, 6), x = rnd(-5, 8), b = rnd(-10, 10) || 3; const c = -a * x + b; const bb = b < 0 ? `− ${-b}` : `+ ${b}`; const fop = flip[op];
+    return { type: "inequality", op: fop, value: x, tol: 0.011, prompt: `Solve for x:   −${a}x ${bb} ${op} ${c}`, display: `x ${fop} ${x}`, explain: `Subtract ${b}, then divide by −${a}. Dividing by a negative flips the sign → x ${fop} ${x}.` };
+  }
+  const t = pick(level === 1 ? ["add", "sub"] : ["add", "sub", "pos", "neg"]);
   if (t === "add") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x + b;
     return { type: "inequality", op, value: x, tol: 0.011, prompt: `Solve for x:   x + ${b} ${op} ${c}`, display: `x ${op} ${x}`, explain: `Subtract ${b} from both sides → x ${op} ${x}.` }; }
   if (t === "sub") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x - b;
@@ -237,8 +248,16 @@ function genRatios(level = 2) {
 }
 function genProportions(level = 2) {
   level = clampLvl(level, 4);
+  if (level === 3) { // constant of proportionality: k = y / x
+    const k = rnd(2, 9); const x = rnd(2, 8); const y = k * x;
+    return { type: "numeric", prompt: `y is proportional to x. When x = ${x}, y = ${y}. Find the constant of proportionality k.`, value: k, tol: 0.011, display: `${k}`, explain: `k = y ÷ x = ${y} ÷ ${x} = ${k}.` };
+  }
+  if (level === 4) { // multi-step proportional reasoning
+    const k = rnd(2, 7); const x1 = rnd(2, 5); const x2 = rnd(8, 15); const made = k * x1;
+    return { type: "numeric", prompt: `A printer prints ${made} pages in ${x1} minutes at a steady rate. How many pages in ${x2} minutes?`, value: k * x2, tol: 0.011, display: `${k * x2}`, explain: `Rate ${made}÷${x1}=${k} pages/min. ${k}×${x2} = ${k * x2}.` };
+  }
   const t = level === 1 ? "solve" : pick(["solve", "candy", "soccer"]);
-  const km = level >= 3 ? 8 : 6;
+  const km = 6;
   if (t === "solve") { const b = rnd(3, 9); const k = rnd(2, km); const a = rnd(1, b - 1); const d = b * k; const x = a * k;
     return { type: "numeric", prompt: `Solve for x:   ${a}/${b} = x/${d}`, value: x, tol: 0.011, display: `${x}`, explain: `${d} ÷ ${b} = ${k}, so x = ${a} × ${k} = ${x}.` }; }
   if (t === "candy") { const k = rnd(2, 8); const x1 = rnd(2, 5); const x2 = rnd(6, 12);
@@ -259,9 +278,17 @@ function genPercents(level = 2) {
   level = clampLvl(level, 4);
   if (level === 1) { const p = pick([5, 10, 20, 25, 50]); const n = rnd(2, 20) * 10; const v = r2(p / 100 * n);
     return { type: "numeric", prompt: `What is ${p}% of ${n}?`, value: v, tol: 0.011, display: `${v}`, explain: `${p}% = ${p / 100}. ${p / 100} × ${n} = ${v}.` }; }
-  if (level === 4) { const price = rnd(4, 30) * 5; const off = pick([10, 20, 25]); const tax = pick([5, 8, 10]);
-    const sale = price * (1 - off / 100); const v = r2(sale * (1 + tax / 100));
-    return { type: "numeric", prompt: `A $${price} jersey is ${off}% off, then ${tax}% tax is added. What's the final price?`, value: v, tol: 0.02, display: `$${v}`, explain: `Sale: ${price}×${(100 - off) / 100}=$${r2(sale)}. +${tax}% tax → $${v}.` }; }
+  if (level === 4) {
+    const kind = pick(["taxdisc", "markup", "commission", "error"]);
+    if (kind === "taxdisc") { const price = rnd(4, 30) * 5; const off = pick([10, 20, 25]); const tax = pick([5, 8, 10]);
+      const sale = price * (1 - off / 100); const v = r2(sale * (1 + tax / 100));
+      return { type: "numeric", prompt: `A $${price} jersey is ${off}% off, then ${tax}% tax is added. What's the final price?`, value: v, tol: 0.02, display: `$${v}`, explain: `Sale: ${price}×${(100 - off) / 100}=$${r2(sale)}. +${tax}% tax → $${v}.` }; }
+    if (kind === "markup") { const cost = rnd(4, 30) * 5; const m = pick([20, 25, 40, 50]); const v = r2(cost * (1 + m / 100));
+      return { type: "numeric", prompt: `A store buys a ball for $${cost} and marks it up ${m}%. What's the selling price?`, value: v, tol: 0.02, display: `$${v}`, explain: `${cost} × ${(100 + m) / 100} = $${v}.` }; }
+    if (kind === "commission") { const sales = rnd(4, 40) * 50; const r = pick([5, 10, 15, 20]); const v = r2(sales * r / 100);
+      return { type: "numeric", prompt: `A seller earns ${r}% commission on $${sales} of sales. How much commission?`, value: v, tol: 0.02, display: `$${v}`, explain: `${sales} × ${r / 100} = $${v}.` }; }
+    const err = pick([5, 10, 20, 25]); const actual = rnd(4, 16) * 5; const measured = r2(actual * (1 + pick([1, -1]) * err / 100));
+    return { type: "numeric", prompt: `A measurement was ${measured} but the actual value is ${actual}. What is the percent error?`, value: err, tol: 0.1, display: `${err}%`, explain: `|${measured} − ${actual}| ÷ ${actual} × 100 = ${err}%.` }; }
   const t = pick(["of", "what", "discount", "tip"]);
   if (t === "of") { const p = pick([5, 10, 15, 20, 25, 30, 40, 50, 60, 75]); const n = rnd(2, 40) * 5; const v = r2(p / 100 * n);
     return { type: "numeric", prompt: `What is ${p}% of ${n}?`, value: v, tol: 0.011, display: `${v}`, explain: `${p}% = ${p / 100}. ${p / 100} × ${n} = ${v}.` }; }
@@ -341,6 +368,72 @@ function genMAD(level = 2) {
   return { type: "numeric", prompt: `Find the mean absolute deviation: ${set.join(", ")}`, value: mad, tol: 0.011, display: `${mad}`, explain: `Mean is ${m}; distances ${d}, ${e}, ${e}, ${d}. MAD = (${d}+${e}+${e}+${d})/4 = ${mad}.` };
 }
 
+/* ===== Grade 7 extension topics (gated: unlock as Math 6 topics are mastered) ===== */
+/* Probability — simple, complement, compound (independent), experimental (7.SP.5-8). */
+function genProbability(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 1) { const r = rnd(1, 6), b = rnd(1, 6); const tot = r + b; const [n, d] = simp(r, tot);
+    return { type: "fraction", prompt: `A bag has ${r} red and ${b} blue marbles. What is P(red)?`, value: r / tot, tol: 0.005, display: fracStr(n, d), explain: `${r} red out of ${tot} total = ${fracStr(n, d)}.` }; }
+  if (level === 2) { const r = rnd(1, 5), b = rnd(2, 6); const tot = r + b; const [n, d] = simp(b, tot);
+    return { type: "fraction", prompt: `A bag has ${r} red and ${b} green marbles. What is P(not red)?`, value: b / tot, tol: 0.005, display: fracStr(n, d), explain: `Not red = ${b} green out of ${tot} = ${fracStr(n, d)}.` }; }
+  if (level === 3) { const a = rnd(1, 4), at = a + rnd(1, 4); const c = rnd(1, 4), ct = c + rnd(1, 4); const [n, d] = simp(a * c, at * ct);
+    return { type: "fraction", prompt: `Spinner A wins with probability ${a}/${at}; spinner B wins with probability ${c}/${ct}. P(both win)?`, value: (a * c) / (at * ct), tol: 0.005, display: fracStr(n, d), explain: `Independent events multiply: ${a}/${at} × ${c}/${ct} = ${fracStr(n, d)}.` }; }
+  const trials = pick([20, 25, 50, 100]); const hits = rnd(1, trials - 1); const [n, d] = simp(hits, trials);
+  return { type: "fraction", prompt: `In ${trials} spins, the arrow landed on red ${hits} times. What is the experimental probability of red?`, value: hits / trials, tol: 0.005, display: fracStr(n, d), explain: `${hits} out of ${trials} = ${fracStr(n, d)}.` };
+}
+/* Angle relationships — complementary, supplementary, vertical, adjacent (7.G.B.5). */
+function genAngles(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 1) { const sup = pick([true, false]); const whole = sup ? 180 : 90; const a = rnd(10, whole - 10);
+    return { type: "numeric", prompt: `Two ${sup ? "supplementary" : "complementary"} angles. One is ${a}°. Find the other.`, value: whole - a, tol: 0.011, display: `${whole - a}`, explain: `${sup ? "Supplementary" : "Complementary"} angles add to ${whole}°: ${whole} − ${a} = ${whole - a}°.` }; }
+  if (level === 2) {
+    if (pick(["vert", "adj"]) === "vert") { const a = rnd(20, 160); return { type: "numeric", prompt: `Two vertical angles. One measures ${a}°. Find the other.`, value: a, tol: 0.011, display: `${a}`, explain: `Vertical angles are equal → ${a}°.` }; }
+    const a = rnd(20, 80), b = rnd(20, 80); const c = 180 - a - b;
+    return { type: "numeric", prompt: `Three angles on a straight line measure ${a}°, ${b}°, and x°. Find x.`, value: c, tol: 0.011, display: `${c}`, explain: `Angles on a line add to 180°: 180 − ${a} − ${b} = ${c}°.` };
+  }
+  if (level === 3) { const sup = pick([true, false]); const whole = sup ? 180 : 90; const x = rnd(5, (whole / 2 - 5) | 0); const b = rnd(5, 30); const other = whole - (x + b);
+    return { type: "numeric", prompt: `${sup ? "Supplementary" : "Complementary"} angles: one is (x + ${b})°, the other is ${other}°. Find x.`, value: x, tol: 0.011, display: `x = ${x}`, explain: `(x + ${b}) + ${other} = ${whole}, so x = ${whole} − ${other} − ${b} = ${x}.` }; }
+  const diff = rnd(5, 30) * 2; const smaller = (180 - diff) / 2;
+  return { type: "numeric", prompt: `Two supplementary angles. The larger is ${diff}° more than the smaller. Find the smaller angle.`, value: smaller, tol: 0.011, display: `${smaller}`, explain: `smaller + (smaller + ${diff}) = 180 → 2·smaller = ${180 - diff} → ${smaller}°.` };
+}
+/* Cross-sections of solids (7.G.A.3) — canned but correct choice items. */
+function genSolids(level = 2) {
+  level = clampLvl(level, 2);
+  const items = [
+    { q: "A cube is sliced straight across, parallel to one face. What shape is the cross-section?", a: "Square", opts: ["Square", "Triangle", "Circle", "Pentagon"] },
+    { q: "A rectangular prism is sliced parallel to its base. What shape is the cross-section?", a: "Rectangle", opts: ["Rectangle", "Triangle", "Circle", "Trapezoid"] },
+    { q: "A cylinder is sliced parallel to its base. What shape is the cross-section?", a: "Circle", opts: ["Circle", "Rectangle", "Triangle", "Oval"] },
+    { q: "A cylinder is sliced straight down through the center (perpendicular to the base). What shape is the cross-section?", a: "Rectangle", opts: ["Rectangle", "Circle", "Triangle", "Square"] },
+    { q: "A square pyramid is sliced parallel to its base. What shape is the cross-section?", a: "Square", opts: ["Square", "Triangle", "Circle", "Pentagon"] },
+    { q: "A square pyramid is sliced vertically through its apex. What shape is the cross-section?", a: "Triangle", opts: ["Triangle", "Square", "Circle", "Trapezoid"] },
+  ];
+  const it = pick(level >= 2 ? items : items.slice(0, 3));
+  const arr = shuffle([...it.opts]);
+  return { type: "choice", prompt: it.q, choices: arr, answerIndex: arr.indexOf(it.a), display: it.a, explain: `The slice produces a ${it.a.toLowerCase()}.` };
+}
+/* Scale drawings & scale factor (7.G.A.1). */
+function genScale(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 1) { const k = rnd(2, 12); const d = rnd(2, 9);
+    return { type: "numeric", prompt: `A map scale is 1 cm : ${k} m. A path is ${d} cm on the map. How long is it in real life (m)?`, value: d * k, tol: 0.011, display: `${d * k}`, explain: `${d} × ${k} = ${d * k} m.` }; }
+  if (level === 2) { const k = rnd(2, 10); const real = k * rnd(2, 9);
+    return { type: "numeric", prompt: `A model is built at scale 1 : ${k}. The real object is ${real} cm. How long is the model (cm)?`, value: real / k, tol: 0.011, display: `${real / k}`, explain: `${real} ÷ ${k} = ${real / k} cm.` }; }
+  if (level === 3) { const sf = rnd(2, 6); const len = rnd(3, 12);
+    return { type: "numeric", prompt: `A figure is scaled by a factor of ${sf}. A side of ${len} cm becomes how long (cm)?`, value: len * sf, tol: 0.011, display: `${len * sf}`, explain: `${len} × ${sf} = ${len * sf} cm.` }; }
+  const sf = rnd(2, 5); const area = rnd(3, 12) * rnd(2, 6);
+  return { type: "numeric", prompt: `A shape is enlarged by scale factor ${sf}. Its area was ${area} cm². What is the new area (cm²)?`, value: area * sf * sf, tol: 0.011, display: `${area * sf * sf}`, explain: `Area scales by the factor squared: ${area} × ${sf}² = ${area} × ${sf * sf} = ${area * sf * sf} cm².` };
+}
+/* Samples & comparing populations (7.SP.1-4). */
+function genPopulations(level = 2) {
+  level = clampLvl(level, 3);
+  if (level === 1) { const sample = pick([20, 25, 50]); const liked = rnd(2, sample - 2); const pop = pick([100, 200, 500, 1000]); const est = liked / sample * pop;
+    return { type: "numeric", prompt: `In a random sample of ${sample} students, ${liked} chose pizza. Estimate how many of ${pop} students would choose pizza.`, value: est, tol: 0.5, display: `${est}`, explain: `${liked}/${sample} × ${pop} = ${est}.` }; }
+  if (level === 2) { const meanA = rnd(8, 14), meanB = rnd(8, 14); const mk = (m) => shuffle([m - 2, m - 1, m, m + 1, m + 2]);
+    return { type: "numeric", prompt: `Team A scores: ${mk(meanA).join(", ")}. Team B scores: ${mk(meanB).join(", ")}. How much greater is Team A's mean than Team B's? (A − B)`, value: meanA - meanB, tol: 0.011, display: `${meanA - meanB}`, explain: `Mean A = ${meanA}, Mean B = ${meanB}. Difference = ${meanA - meanB}.` }; }
+  const spread = rnd(3, 8); const m = rnd(10, 15); const tight = [m - 1, m, m, m + 1]; const wide = [m - spread, m, m, m + spread]; const arr = ["Set 1", "Set 2"];
+  return { type: "choice", prompt: `Set 1: ${tight.join(", ")}. Set 2: ${wide.join(", ")}. Which set has greater variability (spread)?`, choices: arr, answerIndex: 1, display: "Set 2", explain: `Set 2's values spread further from the center, so it has greater variability.` };
+}
+
 function parseNum(s) {
   if (s == null) return null;
   // normalize unicode minus/dashes to ASCII "-"; keep spaces (needed for mixed numbers)
@@ -406,23 +499,28 @@ const TOPICS = [
   { id: "pemdas",      unit: 3, candy: "🍦", name: "Order of Operations",      blurb: "Parentheses, Exponents, ×÷ (left→right), then +− (left→right).", gen: genPemdas, max: 4 },
   { id: "evaluate",    unit: 3, candy: "🍨", name: "Evaluate Expressions",     blurb: "Substitute the number for x, then follow order of operations.", gen: genEvaluate, max: 4 },
   { id: "expressions", unit: 3, candy: "🍧", name: "Distribute & Combine",     blurb: "Distribute a(b + c) = ab + ac, then combine like terms.", gen: genExpressions, max: 3 },
-  { id: "onestepeq",   unit: 3, candy: "🍡", name: "One-Step Equations",       blurb: "Undo the one operation to get x by itself.", gen: genOneStepEq, max: 4 },
-  { id: "onestepineq", unit: 3, candy: "🍮", name: "One-Step Inequalities",    blurb: "Solve like an equation; the answer is a range of values.", gen: genOneStepIneq, max: 3 },
+  { id: "onestepeq",   unit: 3, candy: "🍡", name: "One- & Two-Step Equations",  blurb: "Undo the operations to get x by itself. Two-step: undo +/− first, then ×/÷.", gen: genOneStepEq, max: 4 },
+  { id: "onestepineq", unit: 3, candy: "🍮", name: "One- & Two-Step Inequalities", blurb: "Solve like an equation; the answer is a range. Dividing by a negative flips the sign.", gen: genOneStepIneq, max: 4 },
 
   { id: "ratios",      unit: 4, candy: "🍯", name: "Ratios & Unit Rates",      blurb: "A unit rate is the amount per 1 — divide to find “per one.”", gen: genRatios, max: 4 },
   { id: "proportions", unit: 4, candy: "🍓", name: "Proportional Relationships", blurb: "Equal ratios. Find the constant rate, then scale up or down.", gen: genProportions, max: 4 },
   { id: "slope",       unit: 4, candy: "🫐", name: "Slope of a Graph",         blurb: "Slope = rise ÷ run = (y₂ − y₁) / (x₂ − x₁).", gen: genSlope, max: 3 },
-  { id: "percents",    unit: 4, candy: "🍇", name: "Percents",                 blurb: "Percent = per 100. Of, off (discounts), and on top (tax/tip).", gen: genPercents, max: 4 },
+  { id: "percents",    unit: 4, candy: "🍇", name: "Percents",                 blurb: "Percent = per 100. Of, off (discounts), on top (tax/tip), markup, commission.", gen: genPercents, max: 4 },
   { id: "pctchange",   unit: 4, candy: "🍒", name: "Percent Change",           blurb: "Change ÷ original × 100. Up = increase, down = decrease.", gen: genPercentChange, max: 3 },
   { id: "interest",    unit: 4, candy: "🍉", name: "Simple Interest",          blurb: "Simple interest I = P × r × t.", gen: genSimpleInterest, max: 3 },
+  { id: "scale",       unit: 4, candy: "📐", name: "Scale Drawings",           blurb: "Use the scale as a ratio. Lengths scale by the factor; areas by the factor squared.", gen: genScale, max: 4, g7: true },
 
   { id: "circles",     unit: 5, candy: "🍊", name: "Circles: Area & Circumference", blurb: "Area = πr². Circumference = 2πr. Use π ≈ 3.14.", gen: genCircles, max: 3 },
   { id: "polygons",    unit: 5, candy: "🍌", name: "Area of Polygons",         blurb: "Triangle ½bh · parallelogram bh · trapezoid ½(b₁+b₂)h.", gen: genPolygonArea, max: 3 },
   { id: "volume",      unit: 5, candy: "🍎", name: "Volume of Prisms",         blurb: "Volume = area of the base × height (or length).", gen: genVolume, max: 3 },
   { id: "surfacearea", unit: 5, candy: "🍑", name: "Surface Area",             blurb: "Add the areas of all faces: 2(lw + lh + wh).", gen: genSurfaceArea, max: 3 },
+  { id: "angles",      unit: 5, candy: "📏", name: "Angle Relationships",      blurb: "Complementary add to 90°, supplementary to 180°, vertical angles are equal.", gen: genAngles, max: 4, g7: true },
+  { id: "solids",      unit: 5, candy: "🧊", name: "Cross-Sections",           blurb: "The shape you get when you slice a 3-D solid.", gen: genSolids, max: 2, g7: true },
 
   { id: "stats",       unit: 6, candy: "🥝", name: "Mean · Median · Mode · Range", blurb: "Four ways to describe the center and spread of data.", gen: genStats, max: 3 },
   { id: "mad",         unit: 6, candy: "🍍", name: "Mean Absolute Deviation",  blurb: "The average distance of each value from the mean.", gen: genMAD, max: 2 },
+  { id: "probability", unit: 6, candy: "🎲", name: "Probability",              blurb: "P = favorable ÷ total. Independent events multiply.", gen: genProbability, max: 4, g7: true },
+  { id: "populations", unit: 6, candy: "📊", name: "Samples & Populations",    blurb: "Use a sample to estimate a whole population; compare two data sets.", gen: genPopulations, max: 3, g7: true },
 ];
 const TOPIC_MAP = Object.fromEntries(TOPICS.map((t) => [t.id, t]));
 const ALL_IDS = TOPICS.map((t) => t.id);
@@ -431,10 +529,10 @@ const SCHEDULE = [
   { title: "Unit 1 · Fractions & Decimals", ids: ["fractions", "gcflcm", "decimals"] },
   { title: "Unit 2 · Rational Numbers", ids: ["integers", "negfrac", "absval", "fractodec"] },
   { title: "Unit 3 · Expressions & Equations", ids: ["pemdas", "evaluate", "expressions", "onestepeq", "onestepineq"] },
-  { title: "Unit 4 · Ratios & Proportions", ids: ["ratios", "proportions", "slope"] },
+  { title: "Unit 4 · Ratios & Proportions", ids: ["ratios", "proportions", "slope", "scale"] },
   { title: "Unit 4 · Percents", ids: ["percents", "pctchange", "interest"] },
-  { title: "Unit 5 · Geometry", ids: ["circles", "polygons", "volume", "surfacearea"] },
-  { title: "Unit 6 · Statistics", ids: ["stats", "mad"] },
+  { title: "Unit 5 · Geometry", ids: ["circles", "polygons", "volume", "surfacearea", "angles", "solids"] },
+  { title: "Unit 6 · Statistics", ids: ["stats", "mad", "probability", "populations"] },
   { title: "Mixed Review & Finish 🏁", ids: ALL_IDS },
 ];
 const START = new Date(2026, 5, 15);
@@ -449,6 +547,15 @@ const STORE_BASE = "beach_math_v2";
 const CURRENT_KEY = "beach_math_current_user";
 const RANKS = ["Sandcrab", "Tide Pooler", "Rookie Guard", "Junior Guard", "Senior Guard", "Tower Lead", "Lifeguard Lt.", "Captain", "Chief"];
 const rankName = (lvl) => RANKS[Math.min(lvl - 1, RANKS.length - 1)];
+
+/* Grade 7 extension topics (g7:true) stay locked until the student masters G7_UNLOCK_AT of the
+   core Math 6 topics — so they progress further into 7th grade as they master the rest. */
+const G7_UNLOCK_AT = 12;
+const CORE_IDS = TOPICS.filter((t) => !t.g7).map((t) => t.id);
+const G7_IDS = TOPICS.filter((t) => t.g7).map((t) => t.id);
+function masteredCount(progress, ids) { const tp = (progress && progress.topics) || {}; return ids.filter((id) => (tp[id]?.correct || 0) >= MASTERY_GOAL).length; }
+function g7Unlocked(progress) { return masteredCount(progress, CORE_IDS) >= G7_UNLOCK_AT; }
+function unlockedIds(ids, progress) { const on = g7Unlocked(progress); return ids.filter((id) => on || !(TOPIC_MAP[id] && TOPIC_MAP[id].g7)); }
 
 /* ===== Avatar + World Cup kit rewards ===== */
 /* Base kit earned by completing the Daily Patrol goal, in this order. */
@@ -1121,9 +1228,9 @@ function Game({ user, onSwitch }) {
     setInput(""); setPicked(null); setFeedback(null); setView("practice"); focusInput();
   }
   function startTopic(tid) { begin("topic", [tid], TOPIC_MAP[tid].name); }
-  function startMix() { begin("mix", ALL_IDS, "Daily Patrol"); }
-  function startWeek() { begin("week", SCHEDULE[wk].ids, "This Week"); }
-  function startReview() { begin("review", ALL_IDS, "Review Misses"); }
+  function startMix() { begin("mix", unlockedIds(ALL_IDS, progress), "Daily Patrol"); }
+  function startWeek() { begin("week", unlockedIds(SCHEDULE[wk].ids, progress), "This Week"); }
+  function startReview() { begin("review", unlockedIds(ALL_IDS, progress), "Review Misses"); }
   function nextProblem() {
     if (mode === "review") {
       const it = (progress.queue || [])[0];
@@ -1290,6 +1397,8 @@ function PrizeModal({ prize, progress, onClose, onLocker }) {
 function MapView({ progress, wk, queueLen, todayCount, onTopic, onMix, onWeek, onReview, onLocker }) {
   const weekIds = new Set(SCHEDULE[wk].ids);
   const units = [1, 2, 3, 4, 5, 6];
+  const g7on = g7Unlocked(progress);
+  const g7need = Math.max(0, G7_UNLOCK_AT - masteredCount(progress, CORE_IDS));
   const next = nextKitPiece(progress.kit.pieces || []);
   const tokens = progress.kit.tokens || 0;
   const prizesToday = progress.kit.lastPrizeDay === dayStr() ? (progress.kit.prizeCount || 0) : 0;
@@ -1330,9 +1439,10 @@ function MapView({ progress, wk, queueLen, todayCount, onTopic, onMix, onWeek, o
         <div key={u}>
           <div style={{ margin: "22px 2px 12px" }}><div style={{ ...S.sectionTitle, color: UNIT_META[u].color }}>{UNIT_META[u].title}</div></div>
           <div style={S.grid}>
-            {TOPICS.filter((t) => t.unit === u).map((t) => (
-              <TopicCard key={t.id} topic={t} stat={progress.topics[t.id]} thisWeek={weekIds.has(t.id)} onClick={() => onTopic(t.id)} />
-            ))}
+            {TOPICS.filter((t) => t.unit === u).map((t) => {
+              const locked = t.g7 && !g7on;
+              return <TopicCard key={t.id} topic={t} stat={progress.topics[t.id]} thisWeek={weekIds.has(t.id)} locked={locked} g7need={g7need} onClick={() => !locked && onTopic(t.id)} />;
+            })}
           </div>
         </div>
       ))}
@@ -1340,17 +1450,31 @@ function MapView({ progress, wk, queueLen, todayCount, onTopic, onMix, onWeek, o
   );
 }
 
-function TopicCard({ topic, stat, thisWeek, onClick }) {
+function TopicCard({ topic, stat, thisWeek, locked, g7need, onClick }) {
   const correct = stat?.correct || 0;
   const pct = Math.min(correct / MASTERY_GOAL, 1) * 100;
   const mastered = correct >= MASTERY_GOAL;
   const color = UNIT_META[topic.unit].color;
+  if (locked) {
+    return (
+      <div className="topiccard" style={{ ...S.card, cursor: "default", opacity: 0.62, background: "#F4EFE4" }} aria-disabled="true">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+          <span style={{ ...S.dot, background: "#B8AE99" }} />
+          <span style={{ ...S.g7Badge, color: "#8A7E66", borderColor: "#C9BFAC" }}>🔒 Grade 7</span>
+        </div>
+        <div style={S.cardName}>{topic.name}</div>
+        <div style={S.cardBlurb}>Unlocks when you master {g7need} more Math 6 {g7need === 1 ? "skill" : "skills"}.</div>
+        <div style={{ marginTop: "auto", paddingTop: 12 }}><Bar pct={0} color="#B8AE99" thin /></div>
+      </div>
+    );
+  }
   return (
     <button className="topiccard focusable" style={S.card} onClick={onClick}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <span style={{ ...S.dot, background: color }} />
         {mastered ? <span style={{ ...S.masterBadge, color }}>{topic.candy} mastered</span>
           : thisWeek ? <span style={{ ...S.weekTag, color, borderColor: color }}>this week</span>
+          : topic.g7 ? <span style={{ ...S.g7Badge, color, borderColor: color }}>Grade 7</span>
           : <span style={S.countBadge}>{correct}/{MASTERY_GOAL}</span>}
       </div>
       <div style={S.cardName}>{topic.name}</div>
@@ -1430,7 +1554,7 @@ function PracticeView({ problem, mode, activeName, reviewDone, queueLen, input, 
    students get probed up to word problems. Results seed each topic's starting level; a topic
    aced at its top tier is seeded as mastered ("start advanced, still review"). */
 function PlacementView({ progress, onComplete }) {
-  const order = TOPICS;
+  const order = TOPICS.filter((t) => !t.g7); // placement assesses the core Math 6 curriculum
   const total = order.length;
   const [started, setStarted] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -1580,6 +1704,7 @@ const S = {
   countBadge: { fontSize: 12, fontWeight: 700, color: "#8AA0A4" },
   masterBadge: { fontSize: 12, fontWeight: 800 },
   weekTag: { fontSize: 11, fontWeight: 800, border: "1.5px solid", borderRadius: 99, padding: "2px 8px", textTransform: "uppercase", letterSpacing: ".03em" },
+  g7Badge: { fontSize: 11, fontWeight: 800, border: "1.5px solid", borderRadius: 99, padding: "2px 8px", textTransform: "uppercase", letterSpacing: ".03em" },
   pBar: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 16, gap: 10 },
   backBtn: { background: "transparent", border: "none", cursor: "pointer", fontSize: 14.5, fontWeight: 700, color: "#12718E", padding: "6px 4px" },
   scorePill: { background: CARD, border: "1px solid #EADFC9", borderRadius: 99, padding: "6px 12px", fontWeight: 800, fontSize: 14 },

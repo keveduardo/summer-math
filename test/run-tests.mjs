@@ -17,7 +17,8 @@ let src = m[1].replace(/const root = ReactDOM[\s\S]*$/, "");
 src += `\nglobalThis.__exp = { parseNum, parseInequality, isCorrect, normalizeProgress, applyAnswer,
   nextKitPiece, streakMilestones, DAILY_GOAL, MAX_DAILY_PRIZES, MASTERY_GOAL, LEVEL_UP_RUN,
   dayStr, yesterdayStr, TEAMS, TEAM_MAP, TOPICS, TOPIC_MAP, clampLvl, topicLevel,
-  makeLeveledProblem, genOneStepIneq };`;
+  makeLeveledProblem, genOneStepIneq, g7Unlocked, unlockedIds, masteredCount,
+  CORE_IDS, G7_IDS, G7_UNLOCK_AT };`;
 const js = transformSync(src, { loader: "jsx" }).code;
 
 const hook = () => {};
@@ -64,21 +65,22 @@ function trueSolve(prompt) {
   const s = prompt.replace("Solve for x:", "").replace(/−/g, "-").trim();
   const mm = s.match(/^(.+?)\s*([<>≤≥])\s*(-?\d+)$/); if (!mm) return null;
   const lhs = mm[1].replace(/\s+/g, ""), op = mm[2], rhs = Number(mm[3]); let c, k, g;
-  if (g = lhs.match(/^x\+(\d+)$/)) { k = 1; c = Number(g[1]); }
-  else if (g = lhs.match(/^x-(\d+)$/)) { k = 1; c = -Number(g[1]); }
-  else if (g = lhs.match(/^(-?\d+)x$/)) { k = Number(g[1]); c = 0; }
+  if (g = lhs.match(/^x([+-]\d+)$/)) { k = 1; c = Number(g[1]); }              // x ± b
+  else if (g = lhs.match(/^(-?\d+)x([+-]\d+)$/)) { k = Number(g[1]); c = Number(g[2]); } // ax ± b (two-step)
+  else if (g = lhs.match(/^(-?\d+)x$/)) { k = Number(g[1]); c = 0; }           // ax
+  else if (lhs === "x") { k = 1; c = 0; }                                       // x
   else return null;
   return { op: k < 0 ? flip[op] : op, val: (rhs - c) / k };
 }
 let mathErr = 0, dispErr = 0, dirErr = 0;
-for (const lv of [1, 2, 3]) for (let i = 0; i < 2000; i++) {
+for (const lv of [1, 2, 3, 4]) for (let i = 0; i < 2000; i++) {
   const p = X.genOneStepIneq(lv);
   const sol = trueSolve(p.prompt);
   if (!sol || sol.op !== p.op || !near(sol.val, p.value)) mathErr++;
   if (!X.isCorrect(p, p.display)) dispErr++;
   if (X.isCorrect(p, flip[p.op] + " " + p.value)) dirErr++;
 }
-ok("inequality generator math correct (L1-3, 6000)", mathErr === 0);
+ok("inequality generator math correct (L1-4 incl. two-step, 8000)", mathErr === 0);
 ok("inequality displayed solution always accepted", dispErr === 0);
 ok("inequality flipped direction always rejected", dirErr === 0);
 
@@ -123,6 +125,23 @@ ok("clampLvl bounds", X.clampLvl(9, 3) === 3 && X.clampLvl(1, 4) === 1 && X.clam
   ok("level steps to 3 after 3 correct", pp.topics.integers.level === 3 && pp.topics.integers.run === 0);
   pp = X.applyAnswer(pp, false, prob);
   ok("level steps back to 2 after a miss", pp.topics.integers.level === 2 && pp.topics.integers.run === 0);
+}
+
+// ---- Grade 7 gating: locked until G7_UNLOCK_AT core topics are mastered ----
+{
+  ok("there are Grade 7 topics", X.G7_IDS.length === 5 && X.CORE_IDS.length === X.TOPICS.length - X.G7_IDS.length);
+  ok("none of G7_IDS are in CORE_IDS", X.G7_IDS.every((id) => !X.CORE_IDS.includes(id)));
+  const empty = X.normalizeProgress(null);
+  ok("g7 locked with no mastery", X.g7Unlocked(empty) === false);
+  ok("unlockedIds filters out g7 when locked", X.unlockedIds(X.TOPICS.map((t) => t.id), empty).every((id) => !X.G7_IDS.includes(id)));
+  const topics = {};
+  for (const id of X.CORE_IDS.slice(0, X.G7_UNLOCK_AT)) topics[id] = { correct: X.MASTERY_GOAL, attempts: X.MASTERY_GOAL, level: 2, run: 0 };
+  const strong = X.normalizeProgress({ topics });
+  ok(`g7 unlocks at ${X.G7_UNLOCK_AT} mastered core topics`, X.g7Unlocked(strong) === true);
+  ok("unlockedIds includes g7 once unlocked", X.G7_IDS.every((id) => X.unlockedIds(X.G7_IDS, strong).includes(id)));
+  const oneShort = {};
+  for (const id of X.CORE_IDS.slice(0, X.G7_UNLOCK_AT - 1)) oneShort[id] = { correct: X.MASTERY_GOAL, attempts: X.MASTERY_GOAL };
+  ok("g7 still locked one short of threshold", X.g7Unlocked(X.normalizeProgress({ topics: oneShort })) === false);
 }
 
 // ---- progress normalization ----
