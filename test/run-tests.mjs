@@ -15,8 +15,9 @@ if (!m) { console.error("Could not find the babel script in public/index.html");
 
 let src = m[1].replace(/const root = ReactDOM[\s\S]*$/, "");
 src += `\nglobalThis.__exp = { parseNum, parseInequality, isCorrect, normalizeProgress, applyAnswer,
-  nextKitPiece, streakMilestones, DAILY_GOAL, MAX_DAILY_PRIZES, dayStr, yesterdayStr,
-  TEAMS, TEAM_MAP, genOneStepIneq };`;
+  nextKitPiece, streakMilestones, DAILY_GOAL, MAX_DAILY_PRIZES, MASTERY_GOAL, LEVEL_UP_RUN,
+  dayStr, yesterdayStr, TEAMS, TEAM_MAP, TOPICS, TOPIC_MAP, clampLvl, topicLevel,
+  makeLeveledProblem, genOneStepIneq };`;
 const js = transformSync(src, { loader: "jsx" }).code;
 
 const hook = () => {};
@@ -57,7 +58,7 @@ ok("isCorrect >=5 maps and is rejected for >", X.isCorrect({ ...ineq, op: "≥" 
 ok("isCorrect wrong direction rejected", X.isCorrect(ineq, "< 5") === false);
 ok("isCorrect wrong value rejected", X.isCorrect(ineq, "> 6") === false);
 
-// independently re-solve generated inequalities to confirm the generator's math
+// independently re-solve generated inequalities to confirm the generator's math (all levels)
 const flip = { "<": ">", ">": "<", "≤": "≥", "≥": "≤" };
 function trueSolve(prompt) {
   const s = prompt.replace("Solve for x:", "").replace(/−/g, "-").trim();
@@ -70,16 +71,59 @@ function trueSolve(prompt) {
   return { op: k < 0 ? flip[op] : op, val: (rhs - c) / k };
 }
 let mathErr = 0, dispErr = 0, dirErr = 0;
-for (let i = 0; i < 5000; i++) {
-  const p = X.genOneStepIneq();
+for (const lv of [1, 2, 3]) for (let i = 0; i < 2000; i++) {
+  const p = X.genOneStepIneq(lv);
   const sol = trueSolve(p.prompt);
   if (!sol || sol.op !== p.op || !near(sol.val, p.value)) mathErr++;
   if (!X.isCorrect(p, p.display)) dispErr++;
   if (X.isCorrect(p, flip[p.op] + " " + p.value)) dirErr++;
 }
-ok("inequality generator math correct (5000)", mathErr === 0);
+ok("inequality generator math correct (L1-3, 6000)", mathErr === 0);
 ok("inequality displayed solution always accepted", dispErr === 0);
 ok("inequality flipped direction always rejected", dirErr === 0);
+
+// ---- every topic at every difficulty level: value/display agree, no NaN/empty ----
+// For numeric/fraction the canonical typed answer (the value) must be accepted; for choice the
+// answerIndex must match its label; inequalities are graded via their display.
+let genErr = [];
+for (const t of X.TOPICS) {
+  for (let lv = 1; lv <= (t.max || 2); lv++) {
+    for (let i = 0; i < 400; i++) {
+      let p; try { p = t.gen(lv); } catch (e) { genErr.push(`${t.id} L${lv} threw: ${e.message}`); break; }
+      const tag = `${t.id} L${lv}`;
+      if (!p || !p.prompt || !p.display || !p.explain) { genErr.push(`${tag} missing field`); continue; }
+      if (p.type === "choice") {
+        if (!(p.answerIndex >= 0 && p.choices && p.choices[p.answerIndex] === p.display)) genErr.push(`${tag} bad choice`);
+        else if (!X.isCorrect(p, null, p.answerIndex)) genErr.push(`${tag} choice not accepted`);
+      } else if (p.type === "inequality") {
+        if (!isFinite(p.value)) genErr.push(`${tag} NaN value`);
+        else if (!X.isCorrect(p, p.display)) genErr.push(`${tag} ineq display rejected`);
+      } else {
+        if (!isFinite(p.value)) genErr.push(`${tag} NaN value`);
+        else if (!X.isCorrect(p, String(p.value))) genErr.push(`${tag} value rejected: ${p.display}`);
+      }
+      if (genErr.length > 8) break;
+    }
+  }
+}
+ok("all topics × levels: value/display consistent", genErr.length === 0);
+if (genErr.length) console.log("  " + genErr.slice(0, 8).join("; "));
+
+// ---- clampLvl never exceeds a topic's max ----
+ok("clampLvl bounds", X.clampLvl(9, 3) === 3 && X.clampLvl(1, 4) === 1 && X.clampLvl(2, 4) === 2 && X.clampLvl(0, 4) === 2);
+
+// ---- within-topic adaptive difficulty: 3 correct steps level up, a miss steps it down ----
+{
+  const prob = { topicId: "integers", key: "integers|x", prompt: "x", display: "1", explain: "", value: 1, tol: 0.01, type: "numeric" };
+  const today = X.dayStr();
+  let pp = X.normalizeProgress({ today: { day: today, count: 0 }, lastDay: today, streak: 1, topics: { integers: { correct: 0, attempts: 0, level: 2, run: 0 } } });
+  pp = X.applyAnswer(pp, true, prob); pp = X.applyAnswer(pp, true, prob);
+  ok("level holds at 2 after 2 correct", pp.topics.integers.level === 2 && pp.topics.integers.run === 2);
+  pp = X.applyAnswer(pp, true, prob);
+  ok("level steps to 3 after 3 correct", pp.topics.integers.level === 3 && pp.topics.integers.run === 0);
+  pp = X.applyAnswer(pp, false, prob);
+  ok("level steps back to 2 after a miss", pp.topics.integers.level === 2 && pp.topics.integers.run === 0);
+}
 
 // ---- progress normalization ----
 const n0 = X.normalizeProgress(null);

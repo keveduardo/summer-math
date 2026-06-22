@@ -28,11 +28,22 @@ const simp = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d) || 1
 const fracStr = (n, d) => (d === 1 ? `${n}` : `${n}/${d}`);
 const r1 = (x) => Math.round(x * 10) / 10;
 const r2 = (x) => Math.round(x * 100) / 100;
+// Difficulty tiers: 1 easy → 2 standard → 3 multi-step → 4 word problem (where supported).
+// Each generator takes a level and self-clamps to its own max; clampLvl guards the input.
+const clampLvl = (level, max) => Math.max(1, Math.min(max || 2, Math.round(level) || 2));
 
 /* ---- Unit 1: Fractions & Decimals ---- */
-function genFractions() {
-  const op = pick(["+", "−", "×", "÷"]);
-  let d1 = rnd(3, 10), d2 = rnd(3, 10), n1 = rnd(1, d1 - 1), n2 = rnd(1, d2 - 1);
+function genFractions(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 4) { // word problem
+    const d = pick([2, 3, 4, 5, 6, 8]); const a = rnd(1, d - 1), b = rnd(1, d - 1);
+    let rn = a + b, rd = d; [rn, rd] = simp(rn, rd);
+    return { type: "fraction", prompt: `A smoothie uses ${a}/${d} cup of mango and ${b}/${d} cup of berries. How many cups of fruit in all?`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `${a}/${d} + ${b}/${d} = ${a + b}/${d} = ${fracStr(rn, rd)} cup.` };
+  }
+  const op = pick(level === 1 ? ["+", "−"] : ["+", "−", "×", "÷"]);
+  const hi = level >= 3 ? 12 : 9;
+  let d1 = rnd(3, hi), d2 = rnd(3, hi), n1 = rnd(1, d1 - 1), n2 = rnd(1, d2 - 1);
+  if (level === 1) { d2 = d1; n2 = rnd(1, d2 - 1); } // like denominators
   if (op === "−" && n1 / d1 < n2 / d2) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
   let rn, rd;
   if (op === "+") { rn = n1 * d2 + n2 * d1; rd = d1 * d2; }
@@ -42,68 +53,136 @@ function genFractions() {
   [rn, rd] = simp(rn, rd);
   return { type: "fraction", prompt: `${n1}/${d1}   ${op}   ${n2}/${d2}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Common denominator (or multiply/flip for × ÷), then simplify → ${fracStr(rn, rd)}.` };
 }
-function genGcfLcm() {
-  const a = rnd(2, 16), b = rnd(2, 16);
+function genGcfLcm(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 4) { // word problem (LCM)
+    const a = rnd(2, 8), b = rnd(2, 9); const l = a * b / gcd(a, b);
+    return { type: "numeric", prompt: `One lighthouse flashes every ${a} seconds, another every ${b} seconds. They just flashed together — after how many seconds will they next flash together?`, value: l, tol: 0.011, display: `${l}`, explain: `That's the LCM of ${a} and ${b} = ${l} seconds.` };
+  }
+  const hi = level === 1 ? 12 : level === 2 ? 16 : 24;
+  const a = rnd(2, hi), b = rnd(2, hi);
   if (pick(["gcf", "lcm"]) === "gcf") { const g = gcd(a, b); return { type: "numeric", prompt: `GCF of ${a} and ${b}?`, value: g, tol: 0.011, display: `${g}`, explain: `The largest factor both share is ${g}.` }; }
   const l = a * b / gcd(a, b); return { type: "numeric", prompt: `LCM of ${a} and ${b}?`, value: l, tol: 0.011, display: `${l}`, explain: `a×b ÷ GCF = ${a}×${b} ÷ ${gcd(a, b)} = ${l}.` };
 }
-function genDecimals() {
-  const op = pick(["+", "−", "×"]); let a, b, value;
+function genDecimals(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 4) { // word problem (money)
+    const price = r2(rnd(150, 1200) / 100); const qty = rnd(2, 6); const total = r2(price * qty);
+    return { type: "numeric", prompt: `Beach snacks cost $${price} each. How much for ${qty} of them?`, value: total, tol: 0.011, display: `${total}`, explain: `${price} × ${qty} = $${total}.` };
+  }
+  const op = pick(level === 1 ? ["+", "−"] : ["+", "−", "×"]); let a, b, value;
   if (op === "×") { a = r1(rnd(11, 99) / 10); b = rnd(2, 12); value = r2(a * b); }
+  else if (level === 1) { a = r1(rnd(10, 200) / 10); b = r1(rnd(10, 200) / 10); if (op === "−" && b > a) [a, b] = [b, a]; value = r1(op === "+" ? a + b : a - b); }
   else { a = r2(rnd(50, 4000) / 100); b = r2(rnd(50, 4000) / 100); if (op === "−" && b > a) [a, b] = [b, a]; value = r2(op === "+" ? a + b : a - b); }
   return { type: "numeric", prompt: `${a}  ${op}  ${b}`, value, tol: 0.011, display: `${value}`, explain: `Line up the decimal points (or count decimal places for ×). Answer: ${value}.` };
 }
 
 /* ---- Unit 2: Rational Numbers ---- */
-function genIntegers() {
-  const op = pick(["+", "−", "×", "÷"]); let a, b, value;
+function genIntegers(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 3) { // multi-term chain, e.g. 15 − (−8) − 3 − (−12)
+    const n = 4; const terms = []; for (let i = 0; i < n; i++) terms.push(rnd(-15, 15) || 5);
+    let value = terms[0]; let str = `${terms[0]}`;
+    for (let i = 1; i < n; i++) { const op = pick(["+", "−"]); const t = terms[i]; const tt = t < 0 ? `(${t})` : `${t}`; str += `  ${op}  ${tt}`; value = op === "+" ? value + t : value - t; }
+    return { type: "numeric", prompt: str, value, tol: 0.011, display: `${value}`, explain: `Work left to right, watching each sign → ${value}.` };
+  }
+  if (level === 4) { // word problem (temperature / elevation)
+    if (pick(["temp", "elev"]) === "temp") { const start = rnd(-8, 5); const drop = rnd(4, 15); const val = start - drop;
+      return { type: "numeric", prompt: `At dawn the beach was ${start}°C. By night it fell ${drop} degrees. What was the night temperature?`, value: val, tol: 0.011, display: `${val}`, explain: `${start} − ${drop} = ${val}°C.` }; }
+    const depth = rnd(3, 20); const rise = rnd(5, 30); const val = -depth + rise;
+    return { type: "numeric", prompt: `A diver is ${depth} m below sea level, then rises ${rise} m. New position? (negative = below sea level)`, value: val, tol: 0.011, display: `${val}`, explain: `−${depth} + ${rise} = ${val} m.` };
+  }
+  const op = pick(level === 1 ? ["+", "−"] : ["+", "−", "×", "÷"]); let a, b, value;
   if (op === "÷") { b = rnd(2, 9) * pick([1, -1]); const q = rnd(2, 9) * pick([1, -1]); a = b * q; value = q; }
   else if (op === "×") { a = rnd(2, 12) * pick([1, -1]); b = rnd(2, 12) * pick([1, -1]); value = a * b; }
-  else { a = rnd(-15, 15); b = rnd(-15, 15); value = op === "+" ? a + b : a - b; }
+  else { const rng = level === 1 ? 10 : 15; a = rnd(-rng, rng); b = rnd(-rng, rng); value = op === "+" ? a + b : a - b; }
   const bb = b < 0 ? `(${b})` : `${b}`;
   return { type: "numeric", prompt: `${a}  ${op}  ${bb}`, value, tol: 0.011, display: `${value}`, explain: `Watch the signs. Answer: ${value}.` };
 }
-function genRationals() {
-  const t = pick(["fadd", "dmul", "fdiv"]);
-  if (t === "fadd") { const n1 = rnd(1, 7) * pick([1, -1]), d1 = rnd(2, 8), n2 = rnd(1, 7) * pick([1, -1]), d2 = rnd(2, 8);
+function genRationals(level = 2) {
+  level = clampLvl(level, 3);
+  const t = pick(level === 1 ? ["fadd"] : ["fadd", "dmul", "fdiv"]);
+  const hi = level >= 3 ? 9 : 7, dhi = level >= 3 ? 10 : 8;
+  if (t === "fadd") { const n1 = rnd(1, hi) * pick([1, -1]), d1 = rnd(2, dhi), n2 = rnd(1, hi) * pick([1, -1]), d2 = rnd(2, dhi);
     let rn = n1 * d2 + n2 * d1, rd = d1 * d2; [rn, rd] = simp(rn, rd);
     return { type: "fraction", prompt: `${fracStr(n1, d1)}   +   ${fracStr(n2, d2)}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Common denominator, mind the signs → ${fracStr(rn, rd)}.` }; }
   if (t === "dmul") { const a = r1(rnd(11, 60) / 10) * pick([1, -1]); const b = rnd(2, 9) * pick([1, -1]); const v = r2(a * b);
     return { type: "numeric", prompt: `${a}  ×  ${b < 0 ? `(${b})` : b}`, value: v, tol: 0.011, display: `${v}`, explain: `Multiply, then set the sign (same → +, different → −). Answer: ${v}.` }; }
-  const n1 = rnd(1, 7) * pick([1, -1]), d1 = rnd(2, 8), n2 = rnd(1, 7), d2 = rnd(2, 8);
+  const n1 = rnd(1, hi) * pick([1, -1]), d1 = rnd(2, dhi), n2 = rnd(1, hi), d2 = rnd(2, dhi);
   let rn = n1 * d2, rd = d1 * n2; [rn, rd] = simp(rn, rd);
   return { type: "fraction", prompt: `${fracStr(n1, d1)}   ÷   ${fracStr(n2, d2)}`, value: rn / rd, tol: 0.005, display: fracStr(rn, rd), explain: `Divide = multiply by the reciprocal → ${fracStr(rn, rd)}.` };
 }
-function genAbsValue() {
-  const t = pick(["abs", "opp", "dist"]);
-  if (t === "abs") { const x = rnd(-20, 20); return { type: "numeric", prompt: `|${x}| = ?`, value: Math.abs(x), tol: 0.011, display: `${Math.abs(x)}`, explain: `Absolute value is distance from 0 → ${Math.abs(x)}.` }; }
-  if (t === "opp") { const x = rnd(-20, 20) || 7; return { type: "numeric", prompt: `What is the opposite of ${x}?`, value: -x, tol: 0.011, display: `${-x}`, explain: `The opposite flips the sign → ${-x}.` }; }
-  const a = rnd(-12, 12); let b = rnd(-12, 12); while (b === a) b = rnd(-12, 12);
-  return { type: "numeric", prompt: `Distance between ${a} and ${b} on a number line?`, value: Math.abs(a - b), tol: 0.011, display: `${Math.abs(a - b)}`, explain: `|${a} − (${b})| = ${Math.abs(a - b)}.` };
+function genAbsValue(level = 2) {
+  level = clampLvl(level, 3);
+  const rng = level >= 3 ? 30 : 20;
+  const t = pick(level === 1 ? ["abs", "opp"] : level === 2 ? ["abs", "opp", "dist"] : ["dist", "sum", "expr"]);
+  if (t === "abs") { const x = rnd(-rng, rng); return { type: "numeric", prompt: `|${x}| = ?`, value: Math.abs(x), tol: 0.011, display: `${Math.abs(x)}`, explain: `Absolute value is distance from 0 → ${Math.abs(x)}.` }; }
+  if (t === "opp") { const x = rnd(-rng, rng) || 7; return { type: "numeric", prompt: `What is the opposite of ${x}?`, value: -x, tol: 0.011, display: `${-x}`, explain: `The opposite flips the sign → ${-x}.` }; }
+  if (t === "dist") { const a = rnd(-rng, rng); let b = rnd(-rng, rng); while (b === a) b = rnd(-rng, rng);
+    return { type: "numeric", prompt: `Distance between ${a} and ${b} on a number line?`, value: Math.abs(a - b), tol: 0.011, display: `${Math.abs(a - b)}`, explain: `|${a} − (${b})| = ${Math.abs(a - b)}.` }; }
+  if (t === "sum") { const a = rnd(-rng, rng), b = rnd(-rng, rng); const v = Math.abs(a) + Math.abs(b);
+    return { type: "numeric", prompt: `|${a}| + |${b}| = ?`, value: v, tol: 0.011, display: `${v}`, explain: `${Math.abs(a)} + ${Math.abs(b)} = ${v}.` }; }
+  const a = rnd(-rng, rng), b = rnd(-rng, rng); const v = Math.abs(a - b);
+  return { type: "numeric", prompt: `|${a} − ${b < 0 ? `(${b})` : b}| = ?`, value: v, tol: 0.011, display: `${v}`, explain: `${a} − ${b < 0 ? `(${b})` : b} = ${a - b}, then |${a - b}| = ${v}.` };
 }
-function genFracToDec() {
-  const d = pick([2, 4, 5, 8, 10, 20, 25]); const n = rnd(1, d - 1); const v = n / d;
+function genFracToDec(level = 2) {
+  level = clampLvl(level, 3);
+  const sets = { 1: [2, 4, 5, 10], 2: [2, 4, 5, 8, 10, 20, 25], 3: [8, 16, 20, 25, 40, 50] };
+  const d = pick(sets[level]); const n = rnd(1, d - 1); const v = n / d;
   return { type: "numeric", prompt: `Write ${n}/${d} as a decimal.`, value: v, tol: 0.005, display: `${v}`, explain: `${n} ÷ ${d} = ${v}.` };
 }
 
 /* ---- Unit 3: Expressions, Equations & Inequalities ---- */
-function genPemdas() {
-  const tmpl = rnd(1, 4); let prompt, value;
+function genPemdas(level = 2) {
+  level = clampLvl(level, 4);
   const a = rnd(2, 9), b = rnd(2, 9), c = rnd(2, 6);
+  if (level === 4) { // word problem
+    const packs = rnd(2, 6), per = rnd(3, 8), extra = rnd(2, 9); const v = packs * per + extra;
+    return { type: "numeric", prompt: `You buy ${packs} packs of ${per} glow sticks, then find ${extra} more. How many glow sticks in all?`, value: v, tol: 0.011, display: `${v}`, explain: `${packs} × ${per} + ${extra} = ${packs * per} + ${extra} = ${v} (multiply before adding).` };
+  }
+  if (level === 1) { return { type: "numeric", prompt: `${a} + ${b} × ${c}`, value: a + b * c, tol: 0.011, display: `${a + b * c}`, explain: `Multiply first: ${b}×${c}=${b * c}, then +${a} = ${a + b * c}.` }; }
+  if (level === 3) {
+    const tmpl = rnd(1, 3);
+    if (tmpl === 1) { const v = (a + b) * c - a; return { type: "numeric", prompt: `(${a} + ${b}) × ${c} − ${a}`, value: v, tol: 0.011, display: `${v}`, explain: `(${a}+${b})×${c} − ${a} = ${(a + b) * c} − ${a} = ${v}.` }; }
+    if (tmpl === 2) { const s = rnd(2, 5); const v = a * s * s - b; return { type: "numeric", prompt: `${a} × ${s}² − ${b}`, value: v, tol: 0.011, display: `${v}`, explain: `${s}²=${s * s}, ×${a}=${a * s * s}, −${b} = ${v}.` }; }
+    const v = a * c + b * c; return { type: "numeric", prompt: `${a} × ${c} + ${b} × ${c}`, value: v, tol: 0.011, display: `${v}`, explain: `${a * c} + ${b * c} = ${v}.` };
+  }
+  const tmpl = rnd(1, 4); let prompt, value;
   if (tmpl === 1) { prompt = `${a} + ${b} × ${c}`; value = a + b * c; }
   else if (tmpl === 2) { prompt = `(${a} + ${b}) × ${c}`; value = (a + b) * c; }
   else if (tmpl === 3) { const s = rnd(2, 5); prompt = `${a} + ${s}²`; value = a + s * s; }
   else { prompt = `${a * c} ÷ ${c} + ${b}`; value = a + b; }
   return { type: "numeric", prompt, value, tol: 0.011, display: `${value}`, explain: `Parentheses, Exponents, ×÷, then +−. Answer: ${value}.` };
 }
-function genEvaluate() {
-  const a = rnd(2, 9), b = rnd(-6, 9), x = rnd(-5, 8);
-  if (pick(["lin", "sq"]) === "lin") { const val = a * x + b; const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
+function genEvaluate(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 4) { // word problem (evaluate a formula)
+    const rate = rnd(2, 9), base = rnd(2, 15), h = rnd(2, 8); const v = rate * h + base;
+    return { type: "numeric", prompt: `A surf lesson costs $${base} plus $${rate} per hour. What's the cost for ${h} hours?`, value: v, tol: 0.011, display: `${v}`, explain: `${rate}×${h} + ${base} = ${rate * h} + ${base} = $${v}.` };
+  }
+  const a = rnd(2, 9);
+  const x = level === 1 ? rnd(1, 8) : rnd(-5, 8);
+  const useSq = level >= 3 || (level === 2 && pick([true, false]));
+  if (!useSq) { const b = level === 1 ? rnd(1, 9) : rnd(-6, 9); const val = a * x + b; const bb = b < 0 ? `− ${-b}` : `+ ${b}`;
     return { type: "numeric", prompt: `Evaluate ${a}x ${bb} when x = ${x}.`, value: val, tol: 0.011, display: `${val}`, explain: `${a}(${x}) ${b < 0 ? "−" : "+"} ${Math.abs(b)} = ${val}.` }; }
   const c = rnd(2, 5); const val = a * x * x + c;
   return { type: "numeric", prompt: `Evaluate ${a}x² + ${c} when x = ${x}.`, value: val, tol: 0.011, display: `${val}`, explain: `${a}(${x})² + ${c} = ${a * x * x} + ${c} = ${val}.` };
 }
-function genExpressions() {
+function genExpressions(level = 2) {
+  level = clampLvl(level, 3);
+  if (level === 1) {
+    const a = rnd(2, 6), b = rnd(2, 9); const coef = a, con = a * b; const correct = `${coef}x + ${con}`;
+    const opts = new Set([correct]); opts.add(`${coef}x + ${b}`); opts.add(`${coef + 1}x + ${con}`); opts.add(`${coef}x + ${con + a}`);
+    const arr = shuffle([...opts].slice(0, 4));
+    return { type: "choice", prompt: `Simplify:   ${a}(x + ${b})`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `Distribute: ${a}·x + ${a}·${b} = ${correct}.` };
+  }
+  if (level === 3) {
+    const a = rnd(2, 5), b = rnd(2, 7), c = rnd(2, 5), d = rnd(2, 7);
+    const coef = a + c, con = a * b + c * d; const correct = `${coef}x + ${con}`;
+    const opts = new Set([correct]); opts.add(`${coef}x + ${a * b + d}`); opts.add(`${a + c + 1}x + ${con}`); opts.add(`${coef}x + ${con + c}`);
+    const arr = shuffle([...opts].slice(0, 4));
+    return { type: "choice", prompt: `Simplify:   ${a}(x + ${b}) + ${c}(x + ${d})`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `${a}x+${a * b} and ${c}x+${c * d} → combine → ${correct}.` };
+  }
   const a = rnd(2, 6), b = rnd(2, 9), c = rnd(1, 6);
   const coef = a + c, con = a * b; const correct = `${coef}x + ${con}`;
   const opts = new Set([correct]);
@@ -111,17 +190,24 @@ function genExpressions() {
   const arr = shuffle([...opts].slice(0, 4));
   return { type: "choice", prompt: `Simplify:   ${a}(x + ${b}) + ${c}x`, choices: arr, answerIndex: arr.indexOf(correct), display: correct, explain: `Distribute: ${a}x + ${a * b}, then add ${c}x → ${correct}.` };
 }
-function genOneStepEq() {
-  const t = pick(["add", "sub", "mul", "div"]);
-  if (t === "add") { const x = rnd(-12, 20), b = rnd(1, 15); return { type: "numeric", prompt: `Solve:   x + ${b} = ${x + b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Subtract ${b}: x = ${x + b} − ${b} = ${x}.` }; }
-  if (t === "sub") { const x = rnd(-12, 20), b = rnd(1, 15); return { type: "numeric", prompt: `Solve:   x − ${b} = ${x - b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Add ${b}: x = ${x - b} + ${b} = ${x}.` }; }
-  if (t === "mul") { const a = rnd(2, 9), x = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   ${a}x = ${a * x}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Divide by ${a}: x = ${a * x} ÷ ${a} = ${x}.` }; }
-  const a = rnd(2, 9), q = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   x ÷ ${a} = ${q}`, value: q * a, tol: 0.011, display: `x = ${q * a}`, explain: `Multiply by ${a}: x = ${q} × ${a} = ${q * a}.` };
+function genOneStepEq(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 4) { // word problem
+    const x = rnd(2, 20), add = rnd(2, 15); const total = x + add;
+    return { type: "numeric", prompt: `A team scored ${total} goals — ${add} more than last season. How many did they score last season? (solve x + ${add} = ${total})`, value: x, tol: 0.011, display: `x = ${x}`, explain: `x = ${total} − ${add} = ${x}.` };
+  }
+  const t = pick(level === 1 ? ["add", "sub"] : ["add", "sub", "mul", "div"]);
+  const hi = level >= 3 ? 30 : 20, bhi = level >= 3 ? 20 : 15, ahi = level >= 3 ? 12 : 9;
+  if (t === "add") { const x = rnd(-12, hi), b = rnd(1, bhi); return { type: "numeric", prompt: `Solve:   x + ${b} = ${x + b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Subtract ${b}: x = ${x + b} − ${b} = ${x}.` }; }
+  if (t === "sub") { const x = rnd(-12, hi), b = rnd(1, bhi); return { type: "numeric", prompt: `Solve:   x − ${b} = ${x - b}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Add ${b}: x = ${x - b} + ${b} = ${x}.` }; }
+  if (t === "mul") { const a = rnd(2, ahi), x = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   ${a}x = ${a * x}`, value: x, tol: 0.011, display: `x = ${x}`, explain: `Divide by ${a}: x = ${a * x} ÷ ${a} = ${x}.` }; }
+  const a = rnd(2, ahi), q = rnd(-8, 9); return { type: "numeric", prompt: `Solve:   x ÷ ${a} = ${q}`, value: q * a, tol: 0.011, display: `x = ${q * a}`, explain: `Multiply by ${a}: x = ${q} × ${a} = ${q * a}.` };
 }
-function genOneStepIneq() {
+function genOneStepIneq(level = 2) {
+  level = clampLvl(level, 3);
   const op = pick(["<", ">", "≤", "≥"]);
   const flip = { "<": ">", ">": "<", "≤": "≥", "≥": "≤" };
-  const t = pick(["add", "sub", "pos", "neg"]);
+  const t = pick(level === 1 ? ["add", "sub"] : level === 2 ? ["add", "sub", "pos"] : ["pos", "neg", "neg"]);
   if (t === "add") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x + b;
     return { type: "inequality", op, value: x, tol: 0.011, prompt: `Solve for x:   x + ${b} ${op} ${c}`, display: `x ${op} ${x}`, explain: `Subtract ${b} from both sides → x ${op} ${x}.` }; }
   if (t === "sub") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x - b;
@@ -134,30 +220,48 @@ function genOneStepIneq() {
 }
 
 /* ---- Unit 4: Ratios, Proportions & Percents ---- */
-function genRatios() {
+function genRatios(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 1) { const each = rnd(2, 9); const q = rnd(2, 6); const total = each * q;
+    return { type: "numeric", prompt: `${q} juice boxes cost $${total}. How much is 1 juice box?`, value: each, tol: 0.011, display: `$${each}`, explain: `${total} ÷ ${q} = $${each}.` }; }
+  if (level === 4) { const each = rnd(2, 6); const q1 = rnd(3, 6); const q2 = rnd(7, 12); const spent = each * q1;
+    return { type: "numeric", prompt: `${q1} wristbands cost $${spent}. At that rate, how much would ${q2} wristbands cost?`, value: each * q2, tol: 0.011, display: `$${each * q2}`, explain: `Unit rate $${spent}÷${q1}=$${each}. ${each}×${q2} = $${each * q2}.` }; }
   const t = pick(["speed", "unit", "scale"]);
-  if (t === "speed") { const mpm = rnd(2, 12) * 5; const m = rnd(2, 6); const dist = mpm * m;
+  const mult = level >= 3 ? 2 : 1;
+  if (t === "speed") { const mpm = rnd(2, 12) * 5; const m = rnd(2, 6) * mult; const dist = mpm * m;
     return { type: "numeric", prompt: `Beach FC drill: ran ${dist} meters in ${m} minutes. Meters per minute?`, value: mpm, tol: 0.011, display: `${mpm} m/min`, explain: `${dist} ÷ ${m} = ${mpm} m/min.` }; }
-  if (t === "unit") { const each = rnd(2, 9); const q = rnd(3, 8); const total = each * q;
+  if (t === "unit") { const each = rnd(2, 9); const q = rnd(3, 8) * mult; const total = each * q;
     return { type: "numeric", prompt: `${q} candy bars cost $${total}. Cost of 1 candy bar?`, value: each, tol: 0.011, display: `$${each}`, explain: `${total} ÷ ${q} = $${each} each.` }; }
-  const each = rnd(2, 6); const q1 = rnd(2, 5); const q2 = rnd(6, 10); const total = each * q2;
+  const each = rnd(2, 6); const q1 = rnd(2, 5); const q2 = rnd(6, 10) * mult; const total = each * q2;
   return { type: "numeric", prompt: `If ${q1} ring pops cost $${each * q1}, how much do ${q2} ring pops cost?`, value: total, tol: 0.011, display: `$${total}`, explain: `Unit price $${each}. ${each} × ${q2} = $${total}.` };
 }
-function genProportions() {
-  const t = pick(["solve", "candy", "soccer"]);
-  if (t === "solve") { const b = rnd(3, 9); const k = rnd(2, 6); const a = rnd(1, b - 1); const d = b * k; const x = a * k;
+function genProportions(level = 2) {
+  level = clampLvl(level, 4);
+  const t = level === 1 ? "solve" : pick(["solve", "candy", "soccer"]);
+  const km = level >= 3 ? 8 : 6;
+  if (t === "solve") { const b = rnd(3, 9); const k = rnd(2, km); const a = rnd(1, b - 1); const d = b * k; const x = a * k;
     return { type: "numeric", prompt: `Solve for x:   ${a}/${b} = x/${d}`, value: x, tol: 0.011, display: `${x}`, explain: `${d} ÷ ${b} = ${k}, so x = ${a} × ${k} = ${x}.` }; }
   if (t === "candy") { const k = rnd(2, 8); const x1 = rnd(2, 5); const x2 = rnd(6, 12);
     return { type: "numeric", prompt: `Candy is the same price per piece. ${x1} pieces cost $${k * x1}. Cost of ${x2} pieces?`, value: k * x2, tol: 0.011, display: `$${k * x2}`, explain: `Unit rate $${k}/piece. ${k} × ${x2} = $${k * x2}.` }; }
   const k = rnd(1, 4); const g = rnd(3, 8);
   return { type: "numeric", prompt: `Beach FC scores a steady ${k} goal${k > 1 ? "s" : ""} per game. Goals in ${g} games?`, value: k * g, tol: 0.011, display: `${k * g}`, explain: `${k} × ${g} = ${k * g} goals.` };
 }
-function genSlope() {
-  const m = rnd(-4, 4) || 2; const x1 = rnd(-6, 6); let x2 = rnd(-6, 6); while (x2 === x1) x2 = rnd(-6, 6);
-  const y1 = rnd(-6, 6); const y2 = y1 + m * (x2 - x1);
+function genSlope(level = 2) {
+  level = clampLvl(level, 3);
+  const mRange = level === 1 ? [1, 4] : [-4, 4];
+  const cRange = level >= 3 ? 9 : 6;
+  let m = rnd(mRange[0], mRange[1]); if (m === 0) m = 2;
+  const x1 = rnd(-cRange, cRange); let x2 = rnd(-cRange, cRange); while (x2 === x1) x2 = rnd(-cRange, cRange);
+  const y1 = rnd(-cRange, cRange); const y2 = y1 + m * (x2 - x1);
   return { type: "numeric", prompt: `Find the slope through (${x1}, ${y1}) and (${x2}, ${y2}).`, value: m, tol: 0.011, display: `${m}`, explain: `(${y2}−${y1}) ÷ (${x2}−${x1}) = ${y2 - y1}/${x2 - x1} = ${m}.` };
 }
-function genPercents() {
+function genPercents(level = 2) {
+  level = clampLvl(level, 4);
+  if (level === 1) { const p = pick([5, 10, 20, 25, 50]); const n = rnd(2, 20) * 10; const v = r2(p / 100 * n);
+    return { type: "numeric", prompt: `What is ${p}% of ${n}?`, value: v, tol: 0.011, display: `${v}`, explain: `${p}% = ${p / 100}. ${p / 100} × ${n} = ${v}.` }; }
+  if (level === 4) { const price = rnd(4, 30) * 5; const off = pick([10, 20, 25]); const tax = pick([5, 8, 10]);
+    const sale = price * (1 - off / 100); const v = r2(sale * (1 + tax / 100));
+    return { type: "numeric", prompt: `A $${price} jersey is ${off}% off, then ${tax}% tax is added. What's the final price?`, value: v, tol: 0.02, display: `$${v}`, explain: `Sale: ${price}×${(100 - off) / 100}=$${r2(sale)}. +${tax}% tax → $${v}.` }; }
   const t = pick(["of", "what", "discount", "tip"]);
   if (t === "of") { const p = pick([5, 10, 15, 20, 25, 30, 40, 50, 60, 75]); const n = rnd(2, 40) * 5; const v = r2(p / 100 * n);
     return { type: "numeric", prompt: `What is ${p}% of ${n}?`, value: v, tol: 0.011, display: `${v}`, explain: `${p}% = ${p / 100}. ${p / 100} × ${n} = ${v}.` }; }
@@ -168,58 +272,71 @@ function genPercents() {
   const price = rnd(2, 30) * 5; const p = pick([5, 10, 15, 20, 25]); const v = r2(price * (1 + p / 100));
   return { type: "numeric", prompt: `A $${price} snack-bar bill plus a ${p}% tip. Total?`, value: v, tol: 0.011, display: `$${v}`, explain: `Pay ${100 + p}%: ${price} × ${(100 + p) / 100} = $${v}.` };
 }
-function genPercentChange() {
+function genPercentChange(level = 2) {
+  level = clampLvl(level, 3);
   const o = pick([[10, 10], [20, 5], [25, 4], [50, 2]]); const p = o[0]; const mult = o[1];
-  const start = rnd(2, 20) * mult; const change = start * p / 100; const dir = pick(["increase", "decrease"]);
+  const span = level >= 3 ? 40 : 20;
+  const start = rnd(2, span) * mult; const change = start * p / 100; const dir = pick(["increase", "decrease"]);
   const nw = dir === "increase" ? start + change : start - change;
   return { type: "numeric", prompt: `A price changes from $${start} to $${nw}. Percent ${dir}?`, value: p, tol: 0.05, display: `${p}%`, explain: `Change ${change} ÷ original ${start} = ${r2(change / start)}, ×100 = ${p}%.` };
 }
-function genSimpleInterest() {
-  const P = rnd(2, 20) * 100; const r = pick([2, 3, 4, 5, 6, 8, 10]); const t = rnd(1, 5); const I = P * (r / 100) * t;
+function genSimpleInterest(level = 2) {
+  level = clampLvl(level, 3);
+  const P = rnd(2, level >= 3 ? 40 : 20) * 100; const r = pick([2, 3, 4, 5, 6, 8, 10]); const t = rnd(1, level >= 3 ? 8 : 5); const I = P * (r / 100) * t;
   return { type: "numeric", prompt: `Simple interest: P = $${P}, r = ${r}% per year, t = ${t} years. Interest?`, value: I, tol: 0.011, display: `$${I}`, explain: `I = Prt = ${P} × ${r / 100} × ${t} = $${I}.` };
 }
 
 /* ---- Unit 5: Geometry ---- */
-function genCircles() {
-  const r = rnd(2, 12); const PI = 3.14;
+function genCircles(level = 2) {
+  level = clampLvl(level, 3);
+  const r = rnd(2, level >= 3 ? 20 : 12); const PI = 3.14;
   if (pick(["area", "circ"]) === "area") { const v = r2(PI * r * r); return { type: "numeric", prompt: `Circle radius = ${r}. Area? (use π ≈ 3.14)`, value: v, tol: 0.5, display: `${v}`, explain: `A = πr² = 3.14 × ${r}² = ${v}.` }; }
   const v = r2(2 * PI * r); return { type: "numeric", prompt: `Circle radius = ${r}. Circumference? (use π ≈ 3.14)`, value: v, tol: 0.5, display: `${v}`, explain: `C = 2πr = 2 × 3.14 × ${r} = ${v}.` };
 }
-function genPolygonArea() {
+function genPolygonArea(level = 2) {
+  level = clampLvl(level, 3);
+  const hi = level >= 3 ? 30 : 20;
   const t = pick(["tri", "para", "trap"]);
-  if (t === "tri") { const b = rnd(3, 20), h = rnd(2, 18); const A = b * h / 2; return { type: "numeric", prompt: `Triangle: base ${b}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `½ × b × h = ½ × ${b} × ${h} = ${A}.` }; }
-  if (t === "para") { const b = rnd(3, 20), h = rnd(2, 18); const A = b * h; return { type: "numeric", prompt: `Parallelogram: base ${b}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `b × h = ${b} × ${h} = ${A}.` }; }
+  if (t === "tri") { const b = rnd(3, hi), h = rnd(2, hi); const A = b * h / 2; return { type: "numeric", prompt: `Triangle: base ${b}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `½ × b × h = ½ × ${b} × ${h} = ${A}.` }; }
+  if (t === "para") { const b = rnd(3, hi), h = rnd(2, hi); const A = b * h; return { type: "numeric", prompt: `Parallelogram: base ${b}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `b × h = ${b} × ${h} = ${A}.` }; }
   const b1 = rnd(3, 12), b2 = rnd(3, 12), h = rnd(2, 12); const A = (b1 + b2) / 2 * h;
   return { type: "numeric", prompt: `Trapezoid: bases ${b1} and ${b2}, height ${h}. Area?`, value: A, tol: 0.011, display: `${A}`, explain: `½(b₁+b₂)h = ½(${b1}+${b2})×${h} = ${A}.` };
 }
-function genVolume() {
-  if (pick(["rect", "tri"]) === "rect") { const l = rnd(2, 10), w = rnd(2, 10), h = rnd(2, 10); const V = l * w * h;
+function genVolume(level = 2) {
+  level = clampLvl(level, 3);
+  const hi = level >= 3 ? 15 : 10;
+  if (pick(["rect", "tri"]) === "rect") { const l = rnd(2, hi), w = rnd(2, hi), h = rnd(2, hi); const V = l * w * h;
     return { type: "numeric", prompt: `Rectangular prism ${l} × ${w} × ${h}. Volume?`, value: V, tol: 0.011, display: `${V}`, explain: `l×w×h = ${l}×${w}×${h} = ${V}.` }; }
   const b = rnd(3, 12), ht = rnd(2, 12), len = rnd(2, 12); const V = (b * ht / 2) * len;
   return { type: "numeric", prompt: `Triangular prism: triangle base ${b}, triangle height ${ht}, length ${len}. Volume?`, value: V, tol: 0.011, display: `${V}`, explain: `(½ × ${b} × ${ht}) × ${len} = ${b * ht / 2} × ${len} = ${V}.` };
 }
-function genSurfaceArea() {
-  const l = rnd(2, 9), w = rnd(2, 9), h = rnd(2, 9); const SA = 2 * (l * w + l * h + w * h);
+function genSurfaceArea(level = 2) {
+  level = clampLvl(level, 3);
+  const hi = level >= 3 ? 14 : 9;
+  const l = rnd(2, hi), w = rnd(2, hi), h = rnd(2, hi); const SA = 2 * (l * w + l * h + w * h);
   return { type: "numeric", prompt: `Rectangular prism ${l} × ${w} × ${h}. Surface area?`, value: SA, tol: 0.011, display: `${SA}`, explain: `2(lw+lh+wh) = 2(${l * w}+${l * h}+${w * h}) = ${SA}.` };
 }
 
 /* ---- Unit 6: Statistics ---- */
-function genStats() {
+function genStats(level = 2) {
+  level = clampLvl(level, 3);
+  const hi = level >= 3 ? 30 : 20;
   const t = pick(["mean", "median", "mode", "range"]);
   if (t === "mode") {
-    const modeVal = rnd(1, 20); const others = []; while (others.length < 3) { const v = rnd(1, 20); if (v !== modeVal && !others.includes(v)) others.push(v); }
+    const modeVal = rnd(1, hi); const others = []; while (others.length < 3) { const v = rnd(1, hi); if (v !== modeVal && !others.includes(v)) others.push(v); }
     const set = shuffle([modeVal, modeVal, modeVal, ...others]);
     return { type: "numeric", prompt: `Find the mode: ${set.join(", ")}`, value: modeVal, tol: 0.011, display: `${modeVal}`, explain: `${modeVal} appears most often → ${modeVal}.` };
   }
-  const n = rnd(5, 6); const arr = []; for (let i = 0; i < n; i++) arr.push(rnd(1, 20));
+  const n = level >= 3 ? rnd(7, 8) : rnd(5, 6); const arr = []; for (let i = 0; i < n; i++) arr.push(rnd(1, hi));
   if (t === "range") { const mx = Math.max(...arr), mn = Math.min(...arr); return { type: "numeric", prompt: `Find the range: ${arr.join(", ")}`, value: mx - mn, tol: 0.011, display: `${mx - mn}`, explain: `Max ${mx} − min ${mn} = ${mx - mn}.` }; }
   if (t === "median") { const s = [...arr].sort((a, b) => a - b); const med = n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; return { type: "numeric", prompt: `Find the median: ${arr.join(", ")}`, value: med, tol: 0.011, display: `${med}`, explain: `Sorted: ${s.join(", ")}. Middle value → ${med}.` }; }
   let s = arr.reduce((a, b) => a + b, 0); const rem = s % n; if (rem !== 0) arr[arr.length - 1] += (n - rem);
   s = arr.reduce((a, b) => a + b, 0); const mean = s / n;
   return { type: "numeric", prompt: `Find the mean: ${arr.join(", ")}`, value: mean, tol: 0.011, display: `${mean}`, explain: `Sum ${s} ÷ ${n} = ${mean}.` };
 }
-function genMAD() {
-  const m = rnd(6, 15); const d = rnd(1, 5), e = rnd(1, 5);
+function genMAD(level = 2) {
+  level = clampLvl(level, 2);
+  const m = rnd(6, level >= 2 ? 15 : 10); const d = rnd(1, level >= 2 ? 5 : 3), e = rnd(1, level >= 2 ? 5 : 3);
   const set = shuffle([m - d, m - e, m + e, m + d]); const mad = (d + e + e + d) / 4;
   return { type: "numeric", prompt: `Find the mean absolute deviation: ${set.join(", ")}`, value: mad, tol: 0.011, display: `${mad}`, explain: `Mean is ${m}; distances ${d}, ${e}, ${e}, ${d}. MAD = (${d}+${e}+${e}+${d})/4 = ${mad}.` };
 }
@@ -274,36 +391,38 @@ const UNIT_META = {
   5: { title: "Unit 5 · Geometry", color: "#E8653D" },
   6: { title: "Unit 6 · Statistics", color: "#A95FC9" },
 };
+/* `max` = highest difficulty tier this topic supports (see clampLvl). 4 = has a word-problem
+   tier; 3 = multi-step but no natural word problem; 2 = limited scaling. */
 const TOPICS = [
-  { id: "fractions",   unit: 1, candy: "🍬", name: "Fraction Operations",      blurb: "× ÷ flip-and-multiply; + − need a common denominator. Then simplify.", gen: genFractions },
-  { id: "gcflcm",      unit: 1, candy: "🍭", name: "GCF & LCM",                 blurb: "GCF = biggest shared factor. LCM = smallest shared multiple.", gen: genGcfLcm },
-  { id: "decimals",    unit: 1, candy: "🍫", name: "Decimal Operations",       blurb: "Line up decimal points for + −; count decimal places for ×.", gen: genDecimals },
+  { id: "fractions",   unit: 1, candy: "🍬", name: "Fraction Operations",      blurb: "× ÷ flip-and-multiply; + − need a common denominator. Then simplify.", gen: genFractions, max: 4 },
+  { id: "gcflcm",      unit: 1, candy: "🍭", name: "GCF & LCM",                 blurb: "GCF = biggest shared factor. LCM = smallest shared multiple.", gen: genGcfLcm, max: 4 },
+  { id: "decimals",    unit: 1, candy: "🍫", name: "Decimal Operations",       blurb: "Line up decimal points for + −; count decimal places for ×.", gen: genDecimals, max: 4 },
 
-  { id: "integers",    unit: 2, candy: "🍩", name: "Positive & Negatives",     blurb: "Add, subtract, multiply, divide positive and negative numbers.", gen: genIntegers },
-  { id: "negfrac",     unit: 2, candy: "🍪", name: "Negative Fractions & Decimals", blurb: "All four operations with negative fractions and decimals.", gen: genRationals },
-  { id: "absval",      unit: 2, candy: "🧁", name: "Absolute Value & Opposites", blurb: "Absolute value is distance from 0. Opposites flip the sign.", gen: genAbsValue },
-  { id: "fractodec",   unit: 2, candy: "🍰", name: "Fractions → Decimals",     blurb: "Divide the top by the bottom to get the decimal.", gen: genFracToDec },
+  { id: "integers",    unit: 2, candy: "🍩", name: "Positive & Negatives",     blurb: "Add, subtract, multiply, divide positive and negative numbers.", gen: genIntegers, max: 4 },
+  { id: "negfrac",     unit: 2, candy: "🍪", name: "Negative Fractions & Decimals", blurb: "All four operations with negative fractions and decimals.", gen: genRationals, max: 3 },
+  { id: "absval",      unit: 2, candy: "🧁", name: "Absolute Value & Opposites", blurb: "Absolute value is distance from 0. Opposites flip the sign.", gen: genAbsValue, max: 3 },
+  { id: "fractodec",   unit: 2, candy: "🍰", name: "Fractions → Decimals",     blurb: "Divide the top by the bottom to get the decimal.", gen: genFracToDec, max: 3 },
 
-  { id: "pemdas",      unit: 3, candy: "🍦", name: "Order of Operations",      blurb: "Parentheses, Exponents, ×÷ (left→right), then +− (left→right).", gen: genPemdas },
-  { id: "evaluate",    unit: 3, candy: "🍨", name: "Evaluate Expressions",     blurb: "Substitute the number for x, then follow order of operations.", gen: genEvaluate },
-  { id: "expressions", unit: 3, candy: "🍧", name: "Distribute & Combine",     blurb: "Distribute a(b + c) = ab + ac, then combine like terms.", gen: genExpressions },
-  { id: "onestepeq",   unit: 3, candy: "🍡", name: "One-Step Equations",       blurb: "Undo the one operation to get x by itself.", gen: genOneStepEq },
-  { id: "onestepineq", unit: 3, candy: "🍮", name: "One-Step Inequalities",    blurb: "Solve like an equation; the answer is a range of values.", gen: genOneStepIneq },
+  { id: "pemdas",      unit: 3, candy: "🍦", name: "Order of Operations",      blurb: "Parentheses, Exponents, ×÷ (left→right), then +− (left→right).", gen: genPemdas, max: 4 },
+  { id: "evaluate",    unit: 3, candy: "🍨", name: "Evaluate Expressions",     blurb: "Substitute the number for x, then follow order of operations.", gen: genEvaluate, max: 4 },
+  { id: "expressions", unit: 3, candy: "🍧", name: "Distribute & Combine",     blurb: "Distribute a(b + c) = ab + ac, then combine like terms.", gen: genExpressions, max: 3 },
+  { id: "onestepeq",   unit: 3, candy: "🍡", name: "One-Step Equations",       blurb: "Undo the one operation to get x by itself.", gen: genOneStepEq, max: 4 },
+  { id: "onestepineq", unit: 3, candy: "🍮", name: "One-Step Inequalities",    blurb: "Solve like an equation; the answer is a range of values.", gen: genOneStepIneq, max: 3 },
 
-  { id: "ratios",      unit: 4, candy: "🍯", name: "Ratios & Unit Rates",      blurb: "A unit rate is the amount per 1 — divide to find “per one.”", gen: genRatios },
-  { id: "proportions", unit: 4, candy: "🍓", name: "Proportional Relationships", blurb: "Equal ratios. Find the constant rate, then scale up or down.", gen: genProportions },
-  { id: "slope",       unit: 4, candy: "🫐", name: "Slope of a Graph",         blurb: "Slope = rise ÷ run = (y₂ − y₁) / (x₂ − x₁).", gen: genSlope },
-  { id: "percents",    unit: 4, candy: "🍇", name: "Percents",                 blurb: "Percent = per 100. Of, off (discounts), and on top (tax/tip).", gen: genPercents },
-  { id: "pctchange",   unit: 4, candy: "🍒", name: "Percent Change",           blurb: "Change ÷ original × 100. Up = increase, down = decrease.", gen: genPercentChange },
-  { id: "interest",    unit: 4, candy: "🍉", name: "Simple Interest",          blurb: "Simple interest I = P × r × t.", gen: genSimpleInterest },
+  { id: "ratios",      unit: 4, candy: "🍯", name: "Ratios & Unit Rates",      blurb: "A unit rate is the amount per 1 — divide to find “per one.”", gen: genRatios, max: 4 },
+  { id: "proportions", unit: 4, candy: "🍓", name: "Proportional Relationships", blurb: "Equal ratios. Find the constant rate, then scale up or down.", gen: genProportions, max: 4 },
+  { id: "slope",       unit: 4, candy: "🫐", name: "Slope of a Graph",         blurb: "Slope = rise ÷ run = (y₂ − y₁) / (x₂ − x₁).", gen: genSlope, max: 3 },
+  { id: "percents",    unit: 4, candy: "🍇", name: "Percents",                 blurb: "Percent = per 100. Of, off (discounts), and on top (tax/tip).", gen: genPercents, max: 4 },
+  { id: "pctchange",   unit: 4, candy: "🍒", name: "Percent Change",           blurb: "Change ÷ original × 100. Up = increase, down = decrease.", gen: genPercentChange, max: 3 },
+  { id: "interest",    unit: 4, candy: "🍉", name: "Simple Interest",          blurb: "Simple interest I = P × r × t.", gen: genSimpleInterest, max: 3 },
 
-  { id: "circles",     unit: 5, candy: "🍊", name: "Circles: Area & Circumference", blurb: "Area = πr². Circumference = 2πr. Use π ≈ 3.14.", gen: genCircles },
-  { id: "polygons",    unit: 5, candy: "🍌", name: "Area of Polygons",         blurb: "Triangle ½bh · parallelogram bh · trapezoid ½(b₁+b₂)h.", gen: genPolygonArea },
-  { id: "volume",      unit: 5, candy: "🍎", name: "Volume of Prisms",         blurb: "Volume = area of the base × height (or length).", gen: genVolume },
-  { id: "surfacearea", unit: 5, candy: "🍑", name: "Surface Area",             blurb: "Add the areas of all faces: 2(lw + lh + wh).", gen: genSurfaceArea },
+  { id: "circles",     unit: 5, candy: "🍊", name: "Circles: Area & Circumference", blurb: "Area = πr². Circumference = 2πr. Use π ≈ 3.14.", gen: genCircles, max: 3 },
+  { id: "polygons",    unit: 5, candy: "🍌", name: "Area of Polygons",         blurb: "Triangle ½bh · parallelogram bh · trapezoid ½(b₁+b₂)h.", gen: genPolygonArea, max: 3 },
+  { id: "volume",      unit: 5, candy: "🍎", name: "Volume of Prisms",         blurb: "Volume = area of the base × height (or length).", gen: genVolume, max: 3 },
+  { id: "surfacearea", unit: 5, candy: "🍑", name: "Surface Area",             blurb: "Add the areas of all faces: 2(lw + lh + wh).", gen: genSurfaceArea, max: 3 },
 
-  { id: "stats",       unit: 6, candy: "🥝", name: "Mean · Median · Mode · Range", blurb: "Four ways to describe the center and spread of data.", gen: genStats },
-  { id: "mad",         unit: 6, candy: "🍍", name: "Mean Absolute Deviation",  blurb: "The average distance of each value from the mean.", gen: genMAD },
+  { id: "stats",       unit: 6, candy: "🥝", name: "Mean · Median · Mode · Range", blurb: "Four ways to describe the center and spread of data.", gen: genStats, max: 3 },
+  { id: "mad",         unit: 6, candy: "🍍", name: "Mean Absolute Deviation",  blurb: "The average distance of each value from the mean.", gen: genMAD, max: 2 },
 ];
 const TOPIC_MAP = Object.fromEntries(TOPICS.map((t) => [t.id, t]));
 const ALL_IDS = TOPICS.map((t) => t.id);
@@ -437,7 +556,17 @@ const dayStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.g
 const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
 const DEFAULT_AVATAR = { skin: 0, hair: 0, hairColor: 0, face: 0, body: 0 };
 const DEFAULT_KIT = { pieces: [], closet: [], team: null, variant: "home", tokens: 0, milestones: [], lastPrizeDay: "", prizeCount: 0, lastUnlock: null };
-const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {}, queue: [], avatar: { ...DEFAULT_AVATAR }, kit: { ...DEFAULT_KIT } };
+/* placement: null until the baseline assessment is taken; then { done, day }. Absent on every
+   pre-feature save, so existing students get the assessment on their next login. */
+const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {}, queue: [], avatar: { ...DEFAULT_AVATAR }, kit: { ...DEFAULT_KIT }, placement: null };
+/* How many correct in a row within a topic before its difficulty steps up. */
+const LEVEL_UP_RUN = 3;
+/* Current difficulty tier for a topic (1..topic.max), defaulting to 2 (standard). */
+function topicLevel(progress, tid) {
+  const max = (TOPIC_MAP[tid] && TOPIC_MAP[tid].max) || 2;
+  const s = (progress && progress.topics || {})[tid];
+  return clampLvl(s && s.level ? s.level : 2, max);
+}
 /* Deep-fills avatar/kit so progress saved before this feature (or from KV) never has
    undefined nested fields. Safe to run on any progress object, including null. */
 function normalizeProgress(p) {
@@ -454,14 +583,20 @@ function loadProgress(key) {
   return normalizeProgress(null);
 }
 function snapshot(p) {
-  return { key: p.key, topicId: p.topicId, type: p.type, prompt: p.prompt, display: p.display, explain: p.explain, value: p.value, tol: p.tol, op: p.op, answerIndex: p.answerIndex, choices: p.choices, hits: 0 };
+  return { key: p.key, topicId: p.topicId, type: p.type, prompt: p.prompt, display: p.display, explain: p.explain, value: p.value, tol: p.tol, op: p.op, level: p.level, answerIndex: p.answerIndex, choices: p.choices, hits: 0 };
 }
 function applyAnswer(p, correct, problem) {
   const today = dayStr(); let { streak, lastDay } = p; let today_ = p.today;
   if (today_.day !== today) { streak = lastDay === yesterdayStr() ? streak + 1 : 1; lastDay = today; today_ = { day: today, count: 0 }; }
   today_ = { day: today, count: today_.count + 1 };
-  const t = p.topics[problem.topicId] || { correct: 0, attempts: 0 };
-  const nt = { correct: t.correct + (correct ? 1 : 0), attempts: t.attempts + 1 };
+  const t = p.topics[problem.topicId] || { correct: 0, attempts: 0, level: 2, run: 0 };
+  // Within-topic adaptive difficulty: a run of correct answers steps the level up (capped at
+  // the topic's max); any miss steps it back down. This is the "harder next question" loop.
+  const tmax = (TOPIC_MAP[problem.topicId] && TOPIC_MAP[problem.topicId].max) || 2;
+  let lvl = clampLvl(t.level || 2, tmax), run = t.run || 0;
+  if (correct) { run += 1; if (run >= LEVEL_UP_RUN && lvl < tmax) { lvl += 1; run = 0; } }
+  else { if (lvl > 1) lvl -= 1; run = 0; }
+  const nt = { correct: t.correct + (correct ? 1 : 0), attempts: t.attempts + 1, level: lvl, run };
   let queue = p.queue || [];
   const inQueue = queue.some((it) => it.key === problem.key);
   if (inQueue) {
@@ -497,7 +632,9 @@ function applyAnswer(p, correct, problem) {
   }
   return { ...p, xp: p.xp + (correct ? 10 : 2) + bonusXp, streak, lastDay, today: today_, topics: { ...p.topics, [problem.topicId]: nt }, queue, kit };
 }
-function makeProblem(tid) { const p = TOPIC_MAP[tid].gen(); return { ...p, topicId: tid, key: tid + "|" + p.prompt }; }
+function makeProblem(tid, progress) { const lv = topicLevel(progress, tid); const p = TOPIC_MAP[tid].gen(lv); return { ...p, topicId: tid, level: lv, key: tid + "|" + p.prompt }; }
+/* Build a problem at an explicit level (used by the placement test). */
+function makeLeveledProblem(tid, level) { const t = TOPIC_MAP[tid]; const lv = clampLvl(level, t.max); const p = t.gen(lv); return { ...p, topicId: tid, level: lv, key: tid + "|" + p.prompt }; }
 /* adaptive selection: weight toward weakest topics, and surface due review-misses */
 function weightedTopic(pool, progress) {
   const weights = pool.map((tid) => {
@@ -518,7 +655,7 @@ function drawSmart(pool, progress) {
   const due = (progress.queue || []).filter((it) => poolSet.has(it.topicId));
   const missChance = Math.min(0.4, due.length * 0.08);
   if (due.length && Math.random() < missChance) return { ...pick(due) };
-  return makeProblem(weightedTopic(pool, progress));
+  return makeProblem(weightedTopic(pool, progress), progress);
 }
 
 /* ===== Chibi soccer-player avatar (layered SVG, CSS-animated) =====
@@ -979,7 +1116,7 @@ function Game({ user, onSwitch }) {
     setMode(m); setPool(p); setActiveName(name || ""); setSession({ seen: 0, correct: 0 }); setReviewDone(false);
     const first = m === "review"
       ? ((progress.queue || [])[0] ? { ...(progress.queue || [])[0] } : null)
-      : (m === "topic" ? makeProblem(p[0]) : drawSmart(p, progress));
+      : (m === "topic" ? makeProblem(p[0], progress) : drawSmart(p, progress));
     if (m === "review" && !first) { setReviewDone(true); setProblem(null); } else setProblem(first);
     setInput(""); setPicked(null); setFeedback(null); setView("practice"); focusInput();
   }
@@ -993,7 +1130,7 @@ function Game({ user, onSwitch }) {
       if (!it) { setProblem(null); setReviewDone(true); return; }
       setProblem({ ...it });
     } else if (mode === "topic") {
-      setProblem(makeProblem(pool[0]));
+      setProblem(makeProblem(pool[0], progress));
     } else {
       setProblem(drawSmart(pool, progress));
     }
@@ -1015,6 +1152,7 @@ function Game({ user, onSwitch }) {
       answer: problem.display, xp: np.xp, streak: np.streak, level: Math.floor(np.xp / 100) + 1 });
   }
   function onKey(e) { if (e.key === "Enter") { e.preventDefault(); feedback ? nextProblem() : submit(); } }
+  function finishPlacement(np) { setProgress(np); setView("map"); }
   function setAvatarAttr(key, value) { setProgress((p) => ({ ...p, avatar: { ...p.avatar, [key]: value } })); }
   function claimTeam(teamId) {
     setProgress((p) => {
@@ -1061,7 +1199,9 @@ function Game({ user, onSwitch }) {
         {treats.length > 0 && <div style={S.treatJar}>{treats.map((t) => <span key={t.id} title={t.name}>{t.candy}</span>)}</div>}
       </div>
 
-      {view === "map" ? (
+      {(!(progress.placement && progress.placement.done) || view === "placement") ? (
+        <PlacementView progress={progress} onComplete={finishPlacement} />
+      ) : view === "map" ? (
         <MapView progress={progress} wk={wk} queueLen={queueLen} todayCount={todayCount}
           onTopic={startTopic} onMix={startMix} onWeek={startWeek} onReview={startReview} onLocker={() => setView("locker")} />
       ) : view === "locker" ? (
@@ -1076,7 +1216,7 @@ function Game({ user, onSwitch }) {
       {prize && <PrizeModal prize={prize} progress={progress} onClose={() => setPrize(null)} onLocker={() => { setPrize(null); setView("locker"); }} />}
 
       <footer style={S.footer}>
-        Logged in as {user.name} · <button className="linkbtn focusable" style={S.linkBtn} onClick={onSwitch}>Switch user</button>
+        Logged in as {user.name} · <button className="linkbtn focusable" style={S.linkBtn} onClick={onSwitch}>Switch user</button> · <button className="linkbtn focusable" style={S.linkBtn} onClick={() => setView("placement")}>Retake placement</button>
         <div style={{ marginTop: 4 }}>Progress saves on this device · results sync to the family sheet.</div>
       </footer>
     </div>
@@ -1280,6 +1420,124 @@ function PracticeView({ problem, mode, activeName, reviewDone, queueLen, input, 
         {problem.type === "inequality"
           ? <>Type the full answer with the sign, like <code>x &gt; 5</code> (use <code>&gt;=</code> / <code>&lt;=</code> for ≥ / ≤). Press Enter to check.</>
           : <>Type a number, a fraction (<code>3/4</code>), a mixed number (<code>1 1/15</code>), or a decimal. Press Enter to check.</>}
+      </div>
+    </main>
+  );
+}
+
+/* Compact adaptive baseline assessment: one question per topic (unit-ordered). Within a unit
+   the offered difficulty rises after a correct answer and falls after a miss, so strong
+   students get probed up to word problems. Results seed each topic's starting level; a topic
+   aced at its top tier is seeded as mastered ("start advanced, still review"). */
+function PlacementView({ progress, onComplete }) {
+  const order = TOPICS;
+  const total = order.length;
+  const [started, setStarted] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const [curLevel, setCurLevel] = useState(2);
+  const [results, setResults] = useState({});
+  const [problem, setProblem] = useState(null);
+  const [input, setInput] = useState("");
+  const [picked, setPicked] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const inputRef = useRef(null);
+  const focus = () => setTimeout(() => inputRef.current && inputRef.current.focus(), 60);
+
+  function start() { setStarted(true); setProblem(makeLeveledProblem(order[0].id, 2)); focus(); }
+  function check() {
+    if (feedback || !problem) return;
+    if (problem.type === "choice" && picked === null) return;
+    if (problem.type !== "choice" && input.trim() === "") return;
+    setFeedback({ correct: isCorrect(problem, input, picked) });
+  }
+  function buildProgress(res) {
+    const topics = { ...(progress.topics || {}) };
+    for (const t of order) {
+      const r = res[t.id]; if (!r) continue;
+      const prev = topics[t.id] || { correct: 0, attempts: 0 };
+      const seeded = { ...prev, level: r.level, run: 0 };
+      if (r.mastered) { seeded.correct = Math.max(prev.correct || 0, MASTERY_GOAL); seeded.attempts = Math.max(prev.attempts || 0, MASTERY_GOAL); }
+      topics[t.id] = seeded;
+    }
+    return { ...progress, topics, placement: { done: true, day: dayStr() } };
+  }
+  function next() {
+    if (!feedback) return;
+    const topic = order[idx];
+    const correct = feedback.correct;
+    const shown = problem.level;
+    const tmax = topic.max || 2;
+    const placedLevel = correct ? shown : Math.max(1, shown - 1);
+    const mastered = correct && shown >= tmax;
+    const newResults = { ...results, [topic.id]: { level: placedLevel, mastered } };
+    const nextIdx = idx + 1;
+    if (nextIdx >= total) { onComplete(buildProgress(newResults)); return; }
+    const nextTopic = order[nextIdx];
+    const sameUnit = nextTopic.unit === topic.unit;
+    const nl = sameUnit ? (correct ? Math.min(4, curLevel + 1) : Math.max(1, curLevel - 1)) : 2;
+    setResults(newResults); setIdx(nextIdx); setCurLevel(nl);
+    setProblem(makeLeveledProblem(nextTopic.id, Math.min(nl, nextTopic.max || 2)));
+    setInput(""); setPicked(null); setFeedback(null); focus();
+  }
+  function onKey(e) { if (e.key === "Enter") { e.preventDefault(); feedback ? next() : check(); } }
+  function skip() { onComplete({ ...progress, placement: { done: true, day: dayStr(), skipped: true } }); }
+
+  if (!started) {
+    return (
+      <main style={S.main}>
+        <div style={{ ...S.problemCard, textAlign: "center", padding: "34px 24px" }}>
+          <div style={{ fontSize: 40 }}>🏁</div>
+          <div style={{ fontSize: 22, fontWeight: 800, marginTop: 8 }}>Quick placement check</div>
+          <div style={{ color: "#5C7176", marginTop: 8, lineHeight: 1.5 }}>
+            About {total} short questions, one per skill. They get harder when you’re cruising and easier when you’re not. Skills you ace start you off advanced — so you skip ahead instead of redoing what you already know.
+          </div>
+          <button className="primary focusable" style={{ ...S.primaryBtn, marginTop: 18 }} onClick={start}>Start placement →</button>
+          <button className="focusable" style={{ ...S.linkBtn, marginTop: 12, fontSize: 13 }} onClick={skip}>Skip — start from the beginning</button>
+        </div>
+      </main>
+    );
+  }
+  const topic = order[idx];
+  const color = UNIT_META[topic.unit].color;
+  const answered = !!feedback;
+  return (
+    <main style={S.main}>
+      <div style={S.pBar}>
+        <div style={{ fontSize: 12, color: "#5C7176", fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase" }}>Placement</div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 12, color: "#5C7176", letterSpacing: ".04em", textTransform: "uppercase", fontWeight: 700 }}>{UNIT_META[topic.unit].title}</div>
+          <div style={{ fontSize: 13, color, fontWeight: 700, marginTop: 2 }}>{topic.name}</div>
+        </div>
+        <div style={{ ...S.scorePill, minWidth: 54, textAlign: "right" }}>{idx + 1}/{total}</div>
+      </div>
+      <Bar pct={idx / total * 100} color="#2BAE8E" thin />
+      <div style={{ ...S.problemCard, marginTop: 14 }}>
+        <div style={S.prompt}>{problem.prompt}</div>
+        {problem.type === "choice" ? (
+          <div style={S.choices}>
+            {problem.choices.map((c, i) => {
+              let extra = {};
+              if (answered) { if (i === problem.answerIndex) extra = S.choiceRight; else if (i === picked) extra = S.choiceWrong; }
+              else if (i === picked) extra = S.choiceSel;
+              return (<button key={i} className="choice focusable" style={{ ...S.choiceBtn, ...extra }} onClick={() => !answered && setPicked(i)} disabled={answered}>{c}</button>);
+            })}
+          </div>
+        ) : (
+          <input ref={inputRef} className="answer focusable" style={S.answerInput} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKey} placeholder="Your answer" inputMode="text" autoComplete="off" disabled={answered} aria-label="Your answer" />
+        )}
+        {!answered ? (
+          <button className="primary focusable" style={S.primaryBtn} onClick={check}>Check</button>
+        ) : (
+          <div className="reveal" style={{ ...S.feedback, ...(feedback.correct ? S.fbRight : S.fbWrong) }}>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{feedback.correct ? "Correct 🎉" : "Not quite"}</div>
+            {!feedback.correct && <div style={{ marginTop: 4 }}>Answer: <strong>{problem.display}</strong></div>}
+            <div style={{ marginTop: 6, color: "#33474C", lineHeight: 1.45 }}>{problem.explain}</div>
+            <button className="primary focusable" style={{ ...S.primaryBtn, marginTop: 14 }} onClick={next}>{idx + 1 >= total ? "Finish →" : "Next →"}</button>
+          </div>
+        )}
+      </div>
+      <div style={{ textAlign: "center", marginTop: 14 }}>
+        <button className="focusable" style={{ ...S.linkBtn, fontSize: 12.5 }} onClick={skip}>Skip the rest</button>
       </div>
     </main>
   );
