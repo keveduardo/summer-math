@@ -219,8 +219,16 @@ function genMAD() {
 
 function parseNum(s) {
   if (s == null) return null;
-  let t = String(s).trim().replace(/[$%\s°]/g, "");
+  let t = String(s).trim().replace(/[$%°]/g, ""); // keep spaces: needed for mixed numbers
   if (t === "" || t === "-") return null;
+  // mixed number, e.g. "1 1/15" = 1 + 1/15 = 16/15 (sign of whole applies to the fraction)
+  const mixed = t.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
+  if (mixed) {
+    const w = Number(mixed[1]), na = Number(mixed[2]), nb = Number(mixed[3]);
+    if (nb === 0) return null;
+    return w + (w < 0 ? -1 : 1) * (na / nb);
+  }
+  t = t.replace(/\s/g, "");
   if (t.includes("/")) { const [a, b] = t.split("/"); const na = Number(a), nb = Number(b); if (!isFinite(na) || !isFinite(nb) || nb === 0) return null; return na / nb; }
   const n = Number(t); return isFinite(n) ? n : null;
 }
