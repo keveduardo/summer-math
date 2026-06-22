@@ -308,6 +308,7 @@ const KIT_PIECES = [
   { id: "jersey", name: "Jersey", emoji: "👕" },
 ];
 const nextKitPiece = (pieces) => KIT_PIECES.find((p) => !pieces.includes(p.id)) || null;
+const MAX_DAILY_PRIZES = 2; // base kit pieces earnable per day (one per completed DAILY_GOAL)
 /* Streak milestones that grant a jersey claim token (+ a perk). 3/7/14/30, then every +10. */
 const MILESTONE_PERKS = { 3: "Closet unlocked", 7: "Extra animations", 14: "Accessories", 30: "Golden trophy pose" };
 function streakMilestones(streak) {
@@ -398,7 +399,7 @@ function logEvent(payload) {
 const dayStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
 const DEFAULT_AVATAR = { skin: 0, hair: 0, hairColor: 0, face: 0, body: 0 };
-const DEFAULT_KIT = { pieces: [], closet: [], team: null, tokens: 0, milestones: [], lastPrizeDay: "", lastUnlock: null };
+const DEFAULT_KIT = { pieces: [], closet: [], team: null, tokens: 0, milestones: [], lastPrizeDay: "", prizeCount: 0, lastUnlock: null };
 const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {}, queue: [], avatar: { ...DEFAULT_AVATAR }, kit: { ...DEFAULT_KIT } };
 /* Deep-fills avatar/kit so progress saved before this feature (or from KV) never has
    undefined nested fields. Safe to run on any progress object, including null. */
@@ -435,16 +436,20 @@ function applyAnswer(p, correct, problem) {
   //     new is granted, so the UI can detect a fresh unlock by identity). ---
   const kit = { ...DEFAULT_KIT, ...(p.kit || {}) };
   let bonusXp = 0;
-  if (today_.count >= DAILY_GOAL && kit.lastPrizeDay !== today) {
-    kit.lastPrizeDay = today;
+  // Base kit: one piece per completed DAILY_GOAL, up to MAX_DAILY_PRIZES per day.
+  // prizeCount resets when the day rolls over.
+  let prizeCount = kit.lastPrizeDay === today ? (kit.prizeCount || 0) : 0;
+  const earnable = Math.min(Math.floor(today_.count / DAILY_GOAL), MAX_DAILY_PRIZES);
+  let awarded = null;
+  while (prizeCount < earnable) {
     const piece = nextKitPiece(kit.pieces);
-    if (piece) {
-      kit.pieces = [...kit.pieces, piece.id];
-      kit.lastUnlock = { type: "piece", id: piece.id, label: piece.name, emoji: piece.emoji, at: Date.now() };
-    } else {
-      bonusXp = 20; // base kit already complete — small XP bonus instead
-    }
+    if (piece) { kit.pieces = [...kit.pieces, piece.id]; awarded = piece; }
+    else { bonusXp += 20; } // base kit already complete — small XP bonus instead
+    prizeCount++;
   }
+  kit.lastPrizeDay = today;
+  kit.prizeCount = prizeCount;
+  if (awarded) kit.lastUnlock = { type: "piece", id: awarded.id, label: awarded.name, emoji: awarded.emoji, at: Date.now() };
   const claimed = kit.milestones || [];
   const reached = streakMilestones(streak).filter((m) => !claimed.includes(m));
   if (reached.length) {
@@ -486,31 +491,42 @@ function drawSmart(pool, progress) {
 const DASH = { fill: "rgba(16,42,48,.04)", stroke: "#C7BCA6", strokeWidth: 1.4, strokeDasharray: "3 3" };
 
 function JerseyPattern({ team, uid }) {
-  // Fills clipped to the torso rect (36,70 48x46). Sleeves are drawn separately.
-  const { pattern, primary, secondary } = team;
-  const clip = "torso-" + uid;
+  // Team pattern + hem trim + fabric shading, all clipped to the torso rect (36,70 48x46).
+  const { pattern, primary, secondary, accent } = team;
+  const clip = "torso-" + uid, grad = "shade-" + uid;
   let fills;
   if (pattern === "vstripes") {
     fills = [<rect key="b" x="36" y="70" width="48" height="46" fill={primary} />,
-      ...[44, 60, 76].map((x) => <rect key={x} x={x} y="70" width="8" height="46" fill={secondary} />)];
+      ...[42, 54, 66, 78].map((x) => <rect key={x} x={x} y="70" width="6" height="46" fill={secondary} />)];
   } else if (pattern === "checkers") {
-    const cells = [];
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++)
-      if ((i + j) % 2) cells.push(<rect key={i + "-" + j} x={36 + i * 12} y={70 + j * 12} width="12" height="12" fill={secondary} />);
+    const cells = [], s = 8;
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++)
+      if ((i + j) % 2) cells.push(<rect key={i + "-" + j} x={36 + i * s} y={70 + j * s} width={s} height={s} fill={secondary} />);
     fills = [<rect key="b" x="36" y="70" width="48" height="46" fill={primary} />, ...cells];
   } else if (pattern === "halves") {
     fills = [<rect key="l" x="36" y="70" width="24" height="46" fill={primary} />,
       <rect key="r" x="60" y="70" width="24" height="46" fill={secondary} />];
   } else if (pattern === "sash") {
     fills = [<rect key="b" x="36" y="70" width="48" height="46" fill={primary} />,
-      <line key="s" x1="36" y1="116" x2="84" y2="70" stroke={secondary} strokeWidth="16" />];
+      <path key="s" d="M36 100 L66 70 L80 70 L80 78 L48 116 L36 116 Z" fill={secondary} />];
   } else {
     fills = [<rect key="b" x="36" y="70" width="48" height="46" fill={primary} />];
   }
   return (
     <g>
+      <defs>
+        <linearGradient id={grad} x1="0" y1="0" x2="1" y2="0.3">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.12" />
+          <stop offset="0.55" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0.14" />
+        </linearGradient>
+      </defs>
       <clipPath id={clip}><rect x="36" y="70" width="48" height="46" rx="11" /></clipPath>
-      <g clipPath={`url(#${clip})`}>{fills}</g>
+      <g clipPath={`url(#${clip})`}>
+        {fills}
+        <rect x="36" y="109" width="48" height="7" fill={accent} />
+        <rect x="36" y="70" width="48" height="46" fill={`url(#${grad})`} />
+      </g>
     </g>
   );
 }
@@ -559,13 +575,22 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
         {/* jersey */}
         {has("jersey") ? (
           <g>
+            {/* sleeves + contrasting cuffs */}
             <rect x="24" y="72" width="14" height="22" rx="6" fill={jersey.primary} />
             <rect x="82" y="72" width="14" height="22" rx="6" fill={jersey.primary} />
+            <rect x="24" y="88" width="14" height="6" rx="3" fill={jersey.accent} />
+            <rect x="82" y="88" width="14" height="6" rx="3" fill={jersey.accent} />
+            {/* body, team pattern, hem + shading */}
             <rect x="36" y="70" width="48" height="46" rx="11" fill={jersey.primary} />
             <JerseyPattern team={jersey} uid={uid} />
-            <path d="M52 70 q8 8 16 0" fill="none" stroke={jersey.accent} strokeWidth="3" />
-            {team && <text x="60" y="98" fontSize="13" textAnchor="middle" dominantBaseline="middle">{team.flag}</text>}
-            {accessories && <rect x="24" y="80" width="14" height="5" fill={jersey.accent} />}
+            {/* crew collar */}
+            <path d="M50 70 q10 9 20 0 l-2 5 q-8 5 -16 0 z" fill={jersey.accent} />
+            {/* federation crest */}
+            <path d="M64 81 h9 v5 q0 4.5 -4.5 6.5 q-4.5 -2 -4.5 -6.5 z" fill={jersey.secondary} stroke={jersey.accent} strokeWidth="0.8" />
+            {/* squad number */}
+            <text x="60" y="107" fontSize="12" fontWeight="700" textAnchor="middle" fill={jersey.accent} fontFamily="sans-serif">10</text>
+            {/* captain armband (14-day streak perk) */}
+            {accessories && <rect x="24" y="79" width="14" height="4" fill={jersey.secondary} />}
           </g>
         ) : (
           <rect x="36" y="70" width="48" height="46" rx="11" style={DASH} />
@@ -632,19 +657,26 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
 /* Small shirt icon used in the closet + team picker. */
 function MiniJersey({ team, size = 46 }) {
   const uid = useMemo(() => Math.random().toString(36).slice(2, 8), []);
-  const { pattern, primary, secondary } = team;
+  const { pattern, primary, secondary, accent = "#9FB0AD" } = team;
   const clip = "mini-" + uid;
   const shirt = "M9 9 L17 4 Q24 9 31 4 L39 9 L43 18 L36 22 L36 38 L12 38 L12 22 L5 18 Z";
   let overlay = null;
-  if (pattern === "vstripes") overlay = [16, 24, 32].map((x) => <rect key={x} x={x} y="0" width="4" height="44" fill={secondary} />);
-  else if (pattern === "checkers") { const c = []; for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) if ((i + j) % 2) c.push(<rect key={i + "-" + j} x={4 + i * 8} y={j * 8} width="8" height="8" fill={secondary} />); overlay = c; }
+  if (pattern === "vstripes") overlay = [14, 22, 30].map((x) => <rect key={x} x={x} y="0" width="4" height="44" fill={secondary} />);
+  else if (pattern === "checkers") { const c = []; for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) if ((i + j) % 2) c.push(<rect key={i + "-" + j} x={i * 6} y={j * 6} width="6" height="6" fill={secondary} />); overlay = c; }
   else if (pattern === "halves") overlay = <rect x="24" y="0" width="24" height="44" fill={secondary} />;
   else if (pattern === "sash") overlay = <line x1="6" y1="40" x2="42" y2="6" stroke={secondary} strokeWidth="7" />;
   return (
     <svg viewBox="0 0 48 44" width={size} height={size * 44 / 48} style={{ display: "block" }} aria-hidden="true">
       <clipPath id={clip}><path d={shirt} /></clipPath>
       <path d={shirt} fill={primary} />
-      {overlay && <g clipPath={`url(#${clip})`}>{overlay}</g>}
+      <g clipPath={`url(#${clip})`}>
+        {overlay}
+        <rect x="0" y="33" width="48" height="5" fill={accent} />
+      </g>
+      {/* collar + sleeve cuffs */}
+      <path d="M17 4 Q24 9 31 4 L29 8 Q24 11 19 8 Z" fill={accent} />
+      <path d="M39 9 L43 18 L36 22 L35 18 Z" fill={accent} />
+      <path d="M9 9 L5 18 L12 22 L13 18 Z" fill={accent} />
       <path d={shirt} fill="none" stroke="rgba(16,42,48,.18)" strokeWidth="1" />
     </svg>
   );
@@ -712,7 +744,7 @@ function LockerView({ progress, onBack, onAvatar, onClaim, onEquip }) {
             );
           })}
         </div>
-        <div style={S.lockerHint}>{next ? `Finish today's Daily Patrol (${DAILY_GOAL} questions) to earn your ${next.name.toLowerCase()}.` : "Full kit earned! Daily Patrols now give bonus XP. 🎉"}</div>
+        <div style={S.lockerHint}>{next ? `Finish ${DAILY_GOAL} questions to earn your ${next.name.toLowerCase()} — and you can earn up to ${MAX_DAILY_PRIZES} pieces a day (every ${DAILY_GOAL} questions).` : "Full kit earned! Daily Patrols now give bonus XP. 🎉"}</div>
       </div>
 
       <div style={S.lockerCard}>
@@ -1061,6 +1093,9 @@ function MapView({ progress, wk, queueLen, todayCount, onTopic, onMix, onWeek, o
   const units = [1, 2, 3, 4, 5, 6];
   const next = nextKitPiece(progress.kit.pieces || []);
   const tokens = progress.kit.tokens || 0;
+  const prizesToday = progress.kit.lastPrizeDay === dayStr() ? (progress.kit.prizeCount || 0) : 0;
+  const moreForPrize = Math.max(0, DAILY_GOAL * (prizesToday + 1) - todayCount);
+  const capReached = prizesToday >= MAX_DAILY_PRIZES;
   return (
     <main style={S.main}>
       <button className="mixcard focusable" style={S.lockerBanner} onClick={onLocker}>
@@ -1071,7 +1106,7 @@ function MapView({ progress, wk, queueLen, todayCount, onTopic, onMix, onWeek, o
             {tokens > 0 ? `🎟️ ${tokens} jersey claim${tokens === 1 ? "" : "s"} ready!` : next ? `Next reward: ${next.emoji} ${next.name}` : "Build your World Cup player"}
           </div>
           <div style={{ fontSize: 12.5, color: "#5C7176", marginTop: 2 }}>
-            {next ? `${Math.max(0, DAILY_GOAL - todayCount)} more today to earn it` : "Tap to customize & swap jerseys"}
+            {next ? (capReached ? "Come back tomorrow for the next piece" : `${moreForPrize} more today to earn it`) : "Tap to customize & swap jerseys"}
           </div>
         </div>
         <div style={S.mixArrow}>→</div>
