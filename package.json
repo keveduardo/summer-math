@@ -1,0 +1,15 @@
+{
+  "name": "summer-math",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Beach Math — Cloudflare Worker serving a gamified math-practice app.",
+  "type": "module",
+  "scripts": {
+    "test": "node test/run-tests.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5"
+  }
+}

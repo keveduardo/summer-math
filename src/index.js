@@ -129,7 +129,11 @@ async function handleApi(request, env) {
     if (!env.BEACH_MATH_KV) return json({ ok: true, note: "no kv bound" });
     let b = {};
     try { b = await request.json(); } catch (e) {}
-    if (b.progress) await env.BEACH_MATH_KV.put("progress:" + p.id, JSON.stringify(b.progress));
+    if (b.progress) {
+      const blob = JSON.stringify(b.progress);
+      if (blob.length > 64 * 1024) return json({ error: "progress too large" }, 413); // guard KV writes
+      await env.BEACH_MATH_KV.put("progress:" + p.id, blob);
+    }
     return json({ ok: true });
   }
 
