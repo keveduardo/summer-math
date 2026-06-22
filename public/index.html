@@ -325,65 +325,70 @@ const HAIR_STYLES = ["short", "buzz", "curly", "long", "afro", "bald", "wavy", "
 const FACES = ["smile", "grin", "cool", "focused"];
 const BODY_TYPES = ["Boy", "Girl"];
 
-/* 48 teams of the 2026 FIFA World Cup. Colors/patterns are stylized approximations of
-   each nation's home kit (pattern: solid | vstripes | checkers | halves | sash). */
+/* 48 teams of the 2026 FIFA World Cup, each with home + away kits. Colors are stylized
+   approximations of real national kits (home grounded in established kits; away in
+   realistic alternates). Each kit: K(pattern, shirt, shirt2, shorts, socks, trim) where
+   pattern ∈ solid | vstripes | checkers | halves | sash. shirt2 = pattern/secondary color,
+   trim = collar/cuff/hem/number color. Distinct shorts+socks keep similar shirts apart. */
 const CONF_ORDER = ["host", "uefa", "conmebol", "concacaf", "caf", "afc", "ofc"];
 const CONF_NAMES = { host: "Hosts", uefa: "Europe", conmebol: "South America", concacaf: "N. & C. America", caf: "Africa", afc: "Asia", ofc: "Oceania" };
+const K = (pattern, primary, secondary, shorts, socks, trim) => ({ pattern, primary, secondary, shorts, socks, trim });
+const GENERIC_KIT = K("solid", "#E7ECEA", "#CFD8D5", "#C7D0CD", "#E7ECEA", "#9FB0AD");
 const TEAMS = [
-  { id: "usa", name: "USA", flag: "🇺🇸", conf: "host", pattern: "solid", primary: "#FFFFFF", secondary: "#0A2A5E", accent: "#BF0A30" },
-  { id: "can", name: "Canada", flag: "🇨🇦", conf: "host", pattern: "solid", primary: "#D52B1E", secondary: "#FFFFFF", accent: "#FFFFFF" },
-  { id: "mex", name: "Mexico", flag: "🇲🇽", conf: "host", pattern: "solid", primary: "#016847", secondary: "#FFFFFF", accent: "#CE1126" },
+  { id: "usa", name: "USA", flag: "🇺🇸", conf: "host", home: K("solid", "#FFFFFF", "#0A2A5E", "#0A2A5E", "#FFFFFF", "#BF0A30"), away: K("solid", "#101C3A", "#BF0A30", "#101C3A", "#101C3A", "#BF0A30") },
+  { id: "can", name: "Canada", flag: "🇨🇦", conf: "host", home: K("solid", "#D52B1E", "#FFFFFF", "#D52B1E", "#D52B1E", "#FFFFFF"), away: K("solid", "#1A1A1A", "#D52B1E", "#1A1A1A", "#1A1A1A", "#D52B1E") },
+  { id: "mex", name: "Mexico", flag: "🇲🇽", conf: "host", home: K("solid", "#0A7A3B", "#FFFFFF", "#FFFFFF", "#C8102E", "#FFFFFF"), away: K("solid", "#111317", "#0A7A3B", "#111317", "#111317", "#0A7A3B") },
 
-  { id: "aut", name: "Austria", flag: "🇦🇹", conf: "uefa", pattern: "solid", primary: "#ED2939", secondary: "#FFFFFF", accent: "#FFFFFF" },
-  { id: "bel", name: "Belgium", flag: "🇧🇪", conf: "uefa", pattern: "solid", primary: "#C8102E", secondary: "#000000", accent: "#FFD100" },
-  { id: "bih", name: "Bosnia & Herz.", flag: "🇧🇦", conf: "uefa", pattern: "solid", primary: "#002395", secondary: "#FFD100", accent: "#FFD100" },
-  { id: "cro", name: "Croatia", flag: "🇭🇷", conf: "uefa", pattern: "checkers", primary: "#FFFFFF", secondary: "#E1001A", accent: "#0A2A5E" },
-  { id: "cze", name: "Czechia", flag: "🇨🇿", conf: "uefa", pattern: "solid", primary: "#D7141A", secondary: "#FFFFFF", accent: "#11457E" },
-  { id: "eng", name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", conf: "uefa", pattern: "solid", primary: "#FFFFFF", secondary: "#0A2A5E", accent: "#CE1124" },
-  { id: "fra", name: "France", flag: "🇫🇷", conf: "uefa", pattern: "solid", primary: "#1A2A6C", secondary: "#FFFFFF", accent: "#CE1126" },
-  { id: "ger", name: "Germany", flag: "🇩🇪", conf: "uefa", pattern: "solid", primary: "#FFFFFF", secondary: "#000000", accent: "#D7141A" },
-  { id: "ned", name: "Netherlands", flag: "🇳🇱", conf: "uefa", pattern: "solid", primary: "#EC8B00", secondary: "#000000", accent: "#FFFFFF" },
-  { id: "nor", name: "Norway", flag: "🇳🇴", conf: "uefa", pattern: "solid", primary: "#BA0C2F", secondary: "#00205B", accent: "#FFFFFF" },
-  { id: "por", name: "Portugal", flag: "🇵🇹", conf: "uefa", pattern: "solid", primary: "#A6093D", secondary: "#006847", accent: "#FFD100" },
-  { id: "sco", name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", conf: "uefa", pattern: "solid", primary: "#0A2A5E", secondary: "#FFFFFF", accent: "#FFFFFF" },
-  { id: "esp", name: "Spain", flag: "🇪🇸", conf: "uefa", pattern: "solid", primary: "#C60B1E", secondary: "#11457E", accent: "#FFD100" },
-  { id: "swe", name: "Sweden", flag: "🇸🇪", conf: "uefa", pattern: "solid", primary: "#FECC02", secondary: "#006AA7", accent: "#006AA7" },
-  { id: "sui", name: "Switzerland", flag: "🇨🇭", conf: "uefa", pattern: "solid", primary: "#D52B1E", secondary: "#FFFFFF", accent: "#FFFFFF" },
-  { id: "tur", name: "Türkiye", flag: "🇹🇷", conf: "uefa", pattern: "solid", primary: "#E30A17", secondary: "#FFFFFF", accent: "#FFFFFF" },
+  { id: "aut", name: "Austria", flag: "🇦🇹", conf: "uefa", home: K("solid", "#ED2939", "#FFFFFF", "#FFFFFF", "#ED2939", "#FFFFFF"), away: K("solid", "#1A1A1A", "#ED2939", "#1A1A1A", "#1A1A1A", "#ED2939") },
+  { id: "bel", name: "Belgium", flag: "🇧🇪", conf: "uefa", home: K("solid", "#C8102E", "#111317", "#C8102E", "#C8102E", "#FFD100"), away: K("solid", "#0E8C72", "#FFD100", "#0E8C72", "#0E8C72", "#FFD100") },
+  { id: "bih", name: "Bosnia & Herz.", flag: "🇧🇦", conf: "uefa", home: K("solid", "#0E2C8B", "#FFD100", "#0E2C8B", "#0E2C8B", "#FFD100"), away: K("solid", "#FFFFFF", "#0E2C8B", "#FFFFFF", "#FFFFFF", "#FFD100") },
+  { id: "cro", name: "Croatia", flag: "🇭🇷", conf: "uefa", home: K("checkers", "#FFFFFF", "#E1001A", "#15244F", "#15244F", "#15244F"), away: K("solid", "#15244F", "#E1001A", "#15244F", "#15244F", "#FFFFFF") },
+  { id: "cze", name: "Czechia", flag: "🇨🇿", conf: "uefa", home: K("solid", "#D7141A", "#FFFFFF", "#FFFFFF", "#11457E", "#11457E"), away: K("solid", "#11457E", "#FFFFFF", "#11457E", "#11457E", "#D7141A") },
+  { id: "eng", name: "England", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", conf: "uefa", home: K("solid", "#FFFFFF", "#0A2A5E", "#0A2A5E", "#FFFFFF", "#CE1124"), away: K("solid", "#C81E2C", "#FFFFFF", "#FFFFFF", "#C81E2C", "#FFFFFF") },
+  { id: "fra", name: "France", flag: "🇫🇷", conf: "uefa", home: K("solid", "#1A2A6C", "#FFFFFF", "#FFFFFF", "#CE1126", "#CE1126"), away: K("solid", "#FFFFFF", "#1A2A6C", "#1A2A6C", "#FFFFFF", "#CE1126") },
+  { id: "ger", name: "Germany", flag: "🇩🇪", conf: "uefa", home: K("solid", "#FFFFFF", "#111317", "#111317", "#FFFFFF", "#D7141A"), away: K("solid", "#0B6B3A", "#111317", "#FFFFFF", "#0B6B3A", "#111317") },
+  { id: "ned", name: "Netherlands", flag: "🇳🇱", conf: "uefa", home: K("solid", "#EC8B00", "#111317", "#FFFFFF", "#EC8B00", "#111317"), away: K("solid", "#16245A", "#EC8B00", "#16245A", "#16245A", "#EC8B00") },
+  { id: "nor", name: "Norway", flag: "🇳🇴", conf: "uefa", home: K("solid", "#BA0C2F", "#00205B", "#00205B", "#BA0C2F", "#FFFFFF"), away: K("solid", "#122A55", "#BA0C2F", "#122A55", "#122A55", "#FFFFFF") },
+  { id: "por", name: "Portugal", flag: "🇵🇹", conf: "uefa", home: K("solid", "#A6093D", "#0A5A38", "#0A5A38", "#A6093D", "#0A5A38"), away: K("solid", "#1E8F7E", "#A6093D", "#1E8F7E", "#1E8F7E", "#A6093D") },
+  { id: "sco", name: "Scotland", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", conf: "uefa", home: K("solid", "#13294B", "#FFFFFF", "#13294B", "#E03A3E", "#FFFFFF"), away: K("solid", "#D98AB0", "#13294B", "#13294B", "#13294B", "#FFFFFF") },
+  { id: "esp", name: "Spain", flag: "🇪🇸", conf: "uefa", home: K("solid", "#C60B1E", "#1A2A5E", "#1A2A5E", "#1A2A5E", "#C9A227"), away: K("solid", "#1FAE9C", "#11294F", "#11294F", "#11294F", "#11294F") },
+  { id: "swe", name: "Sweden", flag: "🇸🇪", conf: "uefa", home: K("solid", "#FECC02", "#006AA7", "#006AA7", "#FECC02", "#006AA7"), away: K("solid", "#0A4F7A", "#FECC02", "#0A4F7A", "#0A4F7A", "#FECC02") },
+  { id: "sui", name: "Switzerland", flag: "🇨🇭", conf: "uefa", home: K("solid", "#D52B1E", "#FFFFFF", "#FFFFFF", "#D52B1E", "#FFFFFF"), away: K("solid", "#15171A", "#D52B1E", "#15171A", "#15171A", "#D52B1E") },
+  { id: "tur", name: "Türkiye", flag: "🇹🇷", conf: "uefa", home: K("solid", "#E30A17", "#FFFFFF", "#FFFFFF", "#E30A17", "#FFFFFF"), away: K("solid", "#EAE3D2", "#E30A17", "#E30A17", "#E30A17", "#E30A17") },
 
-  { id: "arg", name: "Argentina", flag: "🇦🇷", conf: "conmebol", pattern: "vstripes", primary: "#75AADB", secondary: "#FFFFFF", accent: "#0A2A5E" },
-  { id: "bra", name: "Brazil", flag: "🇧🇷", conf: "conmebol", pattern: "solid", primary: "#FFDF00", secondary: "#009C3B", accent: "#002776" },
-  { id: "col", name: "Colombia", flag: "🇨🇴", conf: "conmebol", pattern: "solid", primary: "#FCD116", secondary: "#003893", accent: "#CE1126" },
-  { id: "ecu", name: "Ecuador", flag: "🇪🇨", conf: "conmebol", pattern: "solid", primary: "#FFD100", secondary: "#0A2A5E", accent: "#CE1126" },
-  { id: "par", name: "Paraguay", flag: "🇵🇾", conf: "conmebol", pattern: "vstripes", primary: "#D52B1E", secondary: "#FFFFFF", accent: "#0038A8" },
-  { id: "uru", name: "Uruguay", flag: "🇺🇾", conf: "conmebol", pattern: "solid", primary: "#58A5DC", secondary: "#000000", accent: "#FCD116" },
+  { id: "arg", name: "Argentina", flag: "🇦🇷", conf: "conmebol", home: K("vstripes", "#74ACDF", "#FFFFFF", "#14213D", "#FFFFFF", "#14213D"), away: K("solid", "#1E1A3A", "#74ACDF", "#1E1A3A", "#1E1A3A", "#74ACDF") },
+  { id: "bra", name: "Brazil", flag: "🇧🇷", conf: "conmebol", home: K("solid", "#FFDF00", "#009C3B", "#002776", "#FFFFFF", "#009C3B"), away: K("solid", "#002776", "#FFDF00", "#FFFFFF", "#002776", "#FFDF00") },
+  { id: "col", name: "Colombia", flag: "🇨🇴", conf: "conmebol", home: K("solid", "#FCD116", "#003893", "#003893", "#CE1126", "#003893"), away: K("solid", "#16224F", "#D6FF00", "#16224F", "#16224F", "#D6FF00") },
+  { id: "ecu", name: "Ecuador", flag: "🇪🇨", conf: "conmebol", home: K("solid", "#FFD100", "#14215C", "#14215C", "#FFFFFF", "#CE1126"), away: K("solid", "#14215C", "#B87333", "#14215C", "#14215C", "#B87333") },
+  { id: "par", name: "Paraguay", flag: "🇵🇾", conf: "conmebol", home: K("vstripes", "#D52B1E", "#FFFFFF", "#0038A8", "#0038A8", "#0038A8"), away: K("solid", "#0038A8", "#FFFFFF", "#0038A8", "#FFFFFF", "#FFFFFF") },
+  { id: "uru", name: "Uruguay", flag: "🇺🇾", conf: "conmebol", home: K("solid", "#58A5DC", "#111317", "#111317", "#111317", "#111317"), away: K("solid", "#FFFFFF", "#58A5DC", "#111317", "#FFFFFF", "#58A5DC") },
 
-  { id: "cuw", name: "Curaçao", flag: "🇨🇼", conf: "concacaf", pattern: "solid", primary: "#003DA5", secondary: "#FFD100", accent: "#FFFFFF" },
-  { id: "hai", name: "Haiti", flag: "🇭🇹", conf: "concacaf", pattern: "halves", primary: "#00209F", secondary: "#D21034", accent: "#FFFFFF" },
-  { id: "pan", name: "Panama", flag: "🇵🇦", conf: "concacaf", pattern: "solid", primary: "#DA121A", secondary: "#005293", accent: "#FFFFFF" },
+  { id: "cuw", name: "Curaçao", flag: "🇨🇼", conf: "concacaf", home: K("solid", "#003DA5", "#FFD100", "#003DA5", "#003DA5", "#FFD100"), away: K("solid", "#FFFFFF", "#003DA5", "#FFFFFF", "#FFFFFF", "#FFD100") },
+  { id: "hai", name: "Haiti", flag: "🇭🇹", conf: "concacaf", home: K("solid", "#00209F", "#D21034", "#111317", "#00209F", "#D21034"), away: K("solid", "#D21034", "#00209F", "#111317", "#D21034", "#00209F") },
+  { id: "pan", name: "Panama", flag: "🇵🇦", conf: "concacaf", home: K("solid", "#DA121A", "#005293", "#005293", "#DA121A", "#FFFFFF"), away: K("solid", "#FFFFFF", "#DA121A", "#005293", "#FFFFFF", "#DA121A") },
 
-  { id: "alg", name: "Algeria", flag: "🇩🇿", conf: "caf", pattern: "solid", primary: "#FFFFFF", secondary: "#006233", accent: "#D21034" },
-  { id: "cpv", name: "Cabo Verde", flag: "🇨🇻", conf: "caf", pattern: "solid", primary: "#003893", secondary: "#FFFFFF", accent: "#CF2027" },
-  { id: "cod", name: "DR Congo", flag: "🇨🇩", conf: "caf", pattern: "solid", primary: "#1295D8", secondary: "#F7D618", accent: "#CE1021" },
-  { id: "civ", name: "Côte d'Ivoire", flag: "🇨🇮", conf: "caf", pattern: "solid", primary: "#FF8200", secondary: "#FFFFFF", accent: "#009A44" },
-  { id: "egy", name: "Egypt", flag: "🇪🇬", conf: "caf", pattern: "solid", primary: "#CE1126", secondary: "#FFFFFF", accent: "#000000" },
-  { id: "gha", name: "Ghana", flag: "🇬🇭", conf: "caf", pattern: "solid", primary: "#FFFFFF", secondary: "#006B3F", accent: "#CE1126" },
-  { id: "mar", name: "Morocco", flag: "🇲🇦", conf: "caf", pattern: "solid", primary: "#C1272D", secondary: "#006233", accent: "#FFFFFF" },
-  { id: "sen", name: "Senegal", flag: "🇸🇳", conf: "caf", pattern: "solid", primary: "#FFFFFF", secondary: "#00853F", accent: "#E31B23" },
-  { id: "rsa", name: "South Africa", flag: "🇿🇦", conf: "caf", pattern: "solid", primary: "#FFB81C", secondary: "#007A4D", accent: "#000000" },
-  { id: "tun", name: "Tunisia", flag: "🇹🇳", conf: "caf", pattern: "solid", primary: "#E70013", secondary: "#FFFFFF", accent: "#FFFFFF" },
+  { id: "alg", name: "Algeria", flag: "🇩🇿", conf: "caf", home: K("solid", "#FFFFFF", "#006233", "#FFFFFF", "#006233", "#D21034"), away: K("solid", "#006233", "#FFFFFF", "#006233", "#006233", "#D21034") },
+  { id: "cpv", name: "Cabo Verde", flag: "🇨🇻", conf: "caf", home: K("solid", "#003893", "#FFFFFF", "#FFFFFF", "#003893", "#CF2027"), away: K("solid", "#0A2A5E", "#FFFFFF", "#0A2A5E", "#0A2A5E", "#CF2027") },
+  { id: "cod", name: "DR Congo", flag: "🇨🇩", conf: "caf", home: K("solid", "#1295D8", "#F7D618", "#1295D8", "#1295D8", "#CE1021"), away: K("solid", "#CE1021", "#F7D618", "#CE1021", "#CE1021", "#1295D8") },
+  { id: "civ", name: "Côte d'Ivoire", flag: "🇨🇮", conf: "caf", home: K("solid", "#FF8200", "#FFFFFF", "#FFFFFF", "#009A44", "#009A44"), away: K("solid", "#009A44", "#FF8200", "#009A44", "#009A44", "#FF8200") },
+  { id: "egy", name: "Egypt", flag: "🇪🇬", conf: "caf", home: K("solid", "#CE1126", "#FFFFFF", "#FFFFFF", "#111317", "#111317"), away: K("solid", "#15171A", "#CE1126", "#15171A", "#15171A", "#FFFFFF") },
+  { id: "gha", name: "Ghana", flag: "🇬🇭", conf: "caf", home: K("solid", "#FFFFFF", "#006B3F", "#006B3F", "#CE1126", "#CE1126"), away: K("solid", "#CE1126", "#111317", "#111317", "#CE1126", "#FCD116") },
+  { id: "mar", name: "Morocco", flag: "🇲🇦", conf: "caf", home: K("solid", "#C1272D", "#006233", "#006233", "#C1272D", "#006233"), away: K("solid", "#0A6B3A", "#C1272D", "#0A6B3A", "#0A6B3A", "#FFFFFF") },
+  { id: "sen", name: "Senegal", flag: "🇸🇳", conf: "caf", home: K("solid", "#FFFFFF", "#00853F", "#00853F", "#E31B23", "#00853F"), away: K("solid", "#00853F", "#FFFFFF", "#00853F", "#00853F", "#E31B23") },
+  { id: "rsa", name: "South Africa", flag: "🇿🇦", conf: "caf", home: K("solid", "#FFB81C", "#007A4D", "#007A4D", "#FFFFFF", "#007A4D"), away: K("solid", "#007A4D", "#FFB81C", "#007A4D", "#007A4D", "#FFB81C") },
+  { id: "tun", name: "Tunisia", flag: "🇹🇳", conf: "caf", home: K("solid", "#E70013", "#FFFFFF", "#E70013", "#E70013", "#FFFFFF"), away: K("solid", "#FFFFFF", "#E70013", "#FFFFFF", "#FFFFFF", "#E70013") },
 
-  { id: "aus", name: "Australia", flag: "🇦🇺", conf: "afc", pattern: "solid", primary: "#FFCD00", secondary: "#00843D", accent: "#00843D" },
-  { id: "irn", name: "Iran", flag: "🇮🇷", conf: "afc", pattern: "solid", primary: "#FFFFFF", secondary: "#239F40", accent: "#DA0000" },
-  { id: "irq", name: "Iraq", flag: "🇮🇶", conf: "afc", pattern: "solid", primary: "#007A33", secondary: "#FFFFFF", accent: "#FFFFFF" },
-  { id: "jpn", name: "Japan", flag: "🇯🇵", conf: "afc", pattern: "solid", primary: "#0033A0", secondary: "#FFFFFF", accent: "#BC002D" },
-  { id: "jor", name: "Jordan", flag: "🇯🇴", conf: "afc", pattern: "solid", primary: "#CE1126", secondary: "#000000", accent: "#FFFFFF" },
-  { id: "kor", name: "South Korea", flag: "🇰🇷", conf: "afc", pattern: "solid", primary: "#C8102E", secondary: "#0A2A5E", accent: "#FFFFFF" },
-  { id: "qat", name: "Qatar", flag: "🇶🇦", conf: "afc", pattern: "solid", primary: "#8A1538", secondary: "#FFFFFF", accent: "#FFFFFF" },
-  { id: "ksa", name: "Saudi Arabia", flag: "🇸🇦", conf: "afc", pattern: "solid", primary: "#FFFFFF", secondary: "#006C35", accent: "#006C35" },
-  { id: "uzb", name: "Uzbekistan", flag: "🇺🇿", conf: "afc", pattern: "solid", primary: "#FFFFFF", secondary: "#0099B5", accent: "#1EB53A" },
+  { id: "aus", name: "Australia", flag: "🇦🇺", conf: "afc", home: K("solid", "#FFCD00", "#00843D", "#00843D", "#FFCD00", "#00843D"), away: K("solid", "#15244F", "#FFCD00", "#15244F", "#15244F", "#FFCD00") },
+  { id: "irn", name: "Iran", flag: "🇮🇷", conf: "afc", home: K("solid", "#FFFFFF", "#239F40", "#FFFFFF", "#FFFFFF", "#DA0000"), away: K("solid", "#DA0000", "#FFFFFF", "#DA0000", "#DA0000", "#FFFFFF") },
+  { id: "irq", name: "Iraq", flag: "🇮🇶", conf: "afc", home: K("solid", "#0A7A3B", "#FFFFFF", "#FFFFFF", "#0A7A3B", "#FFFFFF"), away: K("solid", "#FFFFFF", "#0A7A3B", "#FFFFFF", "#FFFFFF", "#0A7A3B") },
+  { id: "jpn", name: "Japan", flag: "🇯🇵", conf: "afc", home: K("solid", "#0A2472", "#FFFFFF", "#0A2472", "#0A2472", "#FFFFFF"), away: K("solid", "#FFFFFF", "#0A2472", "#FFFFFF", "#FFFFFF", "#C8102E") },
+  { id: "jor", name: "Jordan", flag: "🇯🇴", conf: "afc", home: K("solid", "#CE1126", "#111317", "#FFFFFF", "#CE1126", "#111317"), away: K("solid", "#1A1A1A", "#CE1126", "#1A1A1A", "#1A1A1A", "#CE1126") },
+  { id: "kor", name: "South Korea", flag: "🇰🇷", conf: "afc", home: K("solid", "#C8102E", "#16245A", "#16245A", "#C8102E", "#16245A"), away: K("solid", "#16245A", "#C8102E", "#16245A", "#16245A", "#C8102E") },
+  { id: "qat", name: "Qatar", flag: "🇶🇦", conf: "afc", home: K("solid", "#8A1538", "#FFFFFF", "#FFFFFF", "#8A1538", "#FFFFFF"), away: K("solid", "#FFFFFF", "#8A1538", "#FFFFFF", "#FFFFFF", "#8A1538") },
+  { id: "ksa", name: "Saudi Arabia", flag: "🇸🇦", conf: "afc", home: K("solid", "#FFFFFF", "#0A7A3B", "#FFFFFF", "#FFFFFF", "#0A7A3B"), away: K("solid", "#0A7A3B", "#FFFFFF", "#0A7A3B", "#0A7A3B", "#FFFFFF") },
+  { id: "uzb", name: "Uzbekistan", flag: "🇺🇿", conf: "afc", home: K("solid", "#FFFFFF", "#0099B5", "#0099B5", "#FFFFFF", "#1EB53A"), away: K("solid", "#0E7C8B", "#FFFFFF", "#0E7C8B", "#0E7C8B", "#FFFFFF") },
 
-  { id: "nzl", name: "New Zealand", flag: "🇳🇿", conf: "ofc", pattern: "solid", primary: "#FFFFFF", secondary: "#000000", accent: "#000000" },
+  { id: "nzl", name: "New Zealand", flag: "🇳🇿", conf: "ofc", home: K("solid", "#FFFFFF", "#111317", "#111317", "#FFFFFF", "#111317"), away: K("solid", "#111317", "#FFFFFF", "#111317", "#111317", "#FFFFFF") },
 ];
 const TEAM_MAP = Object.fromEntries(TEAMS.map((t) => [t.id, t]));
 
@@ -399,7 +404,7 @@ function logEvent(payload) {
 const dayStr = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
 const DEFAULT_AVATAR = { skin: 0, hair: 0, hairColor: 0, face: 0, body: 0 };
-const DEFAULT_KIT = { pieces: [], closet: [], team: null, tokens: 0, milestones: [], lastPrizeDay: "", prizeCount: 0, lastUnlock: null };
+const DEFAULT_KIT = { pieces: [], closet: [], team: null, variant: "home", tokens: 0, milestones: [], lastPrizeDay: "", prizeCount: 0, lastUnlock: null };
 const DEFAULT_PROGRESS = { xp: 0, streak: 0, lastDay: "", today: { day: "", count: 0 }, topics: {}, queue: [], avatar: { ...DEFAULT_AVATAR }, kit: { ...DEFAULT_KIT } };
 /* Deep-fills avatar/kit so progress saved before this feature (or from KV) never has
    undefined nested fields. Safe to run on any progress object, including null. */
@@ -492,7 +497,7 @@ const DASH = { fill: "rgba(16,42,48,.04)", stroke: "#C7BCA6", strokeWidth: 1.4, 
 
 function JerseyPattern({ team, uid }) {
   // Team pattern + hem trim + fabric shading, all clipped to the torso rect (36,70 48x46).
-  const { pattern, primary, secondary, accent } = team;
+  const { pattern, primary, secondary, trim } = team;
   const clip = "torso-" + uid, grad = "shade-" + uid;
   let fills;
   if (pattern === "vstripes") {
@@ -524,7 +529,7 @@ function JerseyPattern({ team, uid }) {
       <clipPath id={clip}><rect x="36" y="70" width="48" height="46" rx="11" /></clipPath>
       <g clipPath={`url(#${clip})`}>
         {fills}
-        <rect x="36" y="109" width="48" height="7" fill={accent} />
+        <rect x="36" y="109" width="48" height="7" fill={trim} />
         <rect x="36" y="70" width="48" height="46" fill={`url(#${grad})`} />
       </g>
     </g>
@@ -540,7 +545,7 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
   const isGirl = (avatar.body || 0) === 1;
   const has = (id) => (kit.pieces || []).includes(id);
   const team = kit.team ? TEAM_MAP[kit.team] : null;
-  const jersey = team || { pattern: "solid", primary: "#E7ECEA", secondary: "#CFD8D5", accent: "#9FB0AD" };
+  const jersey = team ? (team[kit.variant === "away" ? "away" : "home"] || team.home) : GENERIC_KIT;
   const accessories = (kit.milestones || []).includes(14);
   const cls = pose === "celebrate" ? "av-cel" : pose === "static" ? "" : "av-idle";
 
@@ -553,8 +558,8 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
         <rect x="62" y="118" width="12" height="30" rx="5" fill={skin} />
         {/* socks */}
         {has("socks")
-          ? [<rect key="l" x="45" y="138" width="14" height="14" rx="4" fill={jersey.secondary} />,
-             <rect key="r" x="61" y="138" width="14" height="14" rx="4" fill={jersey.secondary} />]
+          ? [<rect key="l" x="45" y="138" width="14" height="14" rx="4" fill={jersey.socks} />,
+             <rect key="r" x="61" y="138" width="14" height="14" rx="4" fill={jersey.socks} />]
           : [<rect key="l" x="45" y="138" width="14" height="14" rx="4" style={DASH} />,
              <rect key="r" x="61" y="138" width="14" height="14" rx="4" style={DASH} />]}
         {/* boots */}
@@ -565,7 +570,7 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
              <path key="r" d="M60 150 h16 a4 4 0 0 1 4 4 v3 h-22 a2 2 0 0 1 -2 -2 z" style={DASH} />]}
         {/* shorts */}
         {has("shorts")
-          ? <path d="M40 110 h40 v14 q0 4 -4 4 h-12 l-4 -8 -4 8 h-12 q-4 0 -4 -4 z" fill={jersey.accent} />
+          ? <path d="M40 110 h40 v14 q0 4 -4 4 h-12 l-4 -8 -4 8 h-12 q-4 0 -4 -4 z" fill={jersey.shorts} />
           : <path d="M40 110 h40 v14 q0 4 -4 4 h-12 l-4 -8 -4 8 h-12 q-4 0 -4 -4 z" style={DASH} />}
         {/* arms (skin) + hands */}
         <rect x="26" y="74" width="10" height="34" rx="5" fill={skin} />
@@ -578,17 +583,25 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
             {/* sleeves + contrasting cuffs */}
             <rect x="24" y="72" width="14" height="22" rx="6" fill={jersey.primary} />
             <rect x="82" y="72" width="14" height="22" rx="6" fill={jersey.primary} />
-            <rect x="24" y="88" width="14" height="6" rx="3" fill={jersey.accent} />
-            <rect x="82" y="88" width="14" height="6" rx="3" fill={jersey.accent} />
+            <rect x="24" y="88" width="14" height="6" rx="3" fill={jersey.trim} />
+            <rect x="82" y="88" width="14" height="6" rx="3" fill={jersey.trim} />
             {/* body, team pattern, hem + shading */}
             <rect x="36" y="70" width="48" height="46" rx="11" fill={jersey.primary} />
             <JerseyPattern team={jersey} uid={uid} />
             {/* crew collar */}
-            <path d="M50 70 q10 9 20 0 l-2 5 q-8 5 -16 0 z" fill={jersey.accent} />
-            {/* federation crest */}
-            <path d="M64 81 h9 v5 q0 4.5 -4.5 6.5 q-4.5 -2 -4.5 -6.5 z" fill={jersey.secondary} stroke={jersey.accent} strokeWidth="0.8" />
+            <path d="M50 70 q10 9 20 0 l-2 5 q-8 5 -16 0 z" fill={jersey.trim} />
+            {/* crest: team flag on a badge (identifies the team even when shirt colors
+                match); abstract shield for the generic kit */}
+            {team ? (
+              <g>
+                <rect x="62.5" y="80" width="13" height="13" rx="3" fill="#FFFFFF" opacity="0.94" stroke={jersey.trim} strokeWidth="0.7" />
+                <text x="69" y="90.6" fontSize="10" textAnchor="middle">{team.flag}</text>
+              </g>
+            ) : (
+              <path d="M64 81 h9 v5 q0 4.5 -4.5 6.5 q-4.5 -2 -4.5 -6.5 z" fill={jersey.secondary} stroke={jersey.trim} strokeWidth="0.8" />
+            )}
             {/* squad number */}
-            <text x="60" y="107" fontSize="12" fontWeight="700" textAnchor="middle" fill={jersey.accent} fontFamily="sans-serif">10</text>
+            <text x="60" y="107" fontSize="12" fontWeight="700" textAnchor="middle" fill={jersey.trim} fontFamily="sans-serif">10</text>
             {/* captain armband (14-day streak perk) */}
             {accessories && <rect x="24" y="79" width="14" height="4" fill={jersey.secondary} />}
           </g>
@@ -654,10 +667,12 @@ function PlayerAvatar({ avatar = DEFAULT_AVATAR, kit = DEFAULT_KIT, size = 120, 
   );
 }
 
-/* Small shirt icon used in the closet + team picker. */
-function MiniJersey({ team, size = 46 }) {
+/* Small shirt icon used in the closet + team picker. Takes a kit object (a team's
+   home or away variant), not the team itself. */
+function MiniJersey({ kit, size = 46, flag }) {
   const uid = useMemo(() => Math.random().toString(36).slice(2, 8), []);
-  const { pattern, primary, secondary, accent = "#9FB0AD" } = team;
+  const { pattern, primary, secondary, trim = "#9FB0AD" } = kit;
+  const accent = trim;
   const clip = "mini-" + uid;
   const shirt = "M9 9 L17 4 Q24 9 31 4 L39 9 L43 18 L36 22 L36 38 L12 38 L12 22 L5 18 Z";
   let overlay = null;
@@ -678,6 +693,7 @@ function MiniJersey({ team, size = 46 }) {
       <path d="M39 9 L43 18 L36 22 L35 18 Z" fill={accent} />
       <path d="M9 9 L5 18 L12 22 L13 18 Z" fill={accent} />
       <path d={shirt} fill="none" stroke="rgba(16,42,48,.18)" strokeWidth="1" />
+      {flag && <text x="24" y="24" fontSize="11" textAnchor="middle" dominantBaseline="middle">{flag}</text>}
     </svg>
   );
 }
@@ -749,26 +765,36 @@ function LockerView({ progress, onBack, onAvatar, onClaim, onEquip }) {
 
       <div style={S.lockerCard}>
         <div style={S.lockerH}>Your closet {(kit.closet || []).length > 0 && <span style={{ color: "#8AA0A4", fontWeight: 600 }}>· {(kit.closet || []).length} jersey{(kit.closet || []).length === 1 ? "" : "s"}</span>}</div>
-        {tokens > 0 && <div style={S.tokenBanner}>🎟️ You have {tokens} jersey claim{tokens === 1 ? "" : "s"} — pick a team below to add it to your closet!</div>}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {tokens > 0 && <div style={S.tokenBanner}>🎟️ You have {tokens} jersey claim{tokens === 1 ? "" : "s"} — pick a team below and you'll get both its home & away kits!</div>}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
           <button className="focusable" onClick={() => onEquip(null)} style={{ ...S.closetTile, borderColor: kit.team == null ? "#12718E" : "#EADFC9" }}>
-            <MiniJersey team={{ pattern: "solid", primary: "#E7ECEA", secondary: "#CFD8D5" }} />
+            <MiniJersey kit={GENERIC_KIT} />
             <span style={S.closetName}>Generic</span>
             {kit.team == null && <span style={S.equippedTag}>worn</span>}
           </button>
           {(kit.closet || []).map((id) => {
             const t = TEAM_MAP[id]; if (!t) return null;
-            const eq = kit.team === id;
             return (
-              <button key={id} className="focusable" onClick={() => onEquip(id)} style={{ ...S.closetTile, borderColor: eq ? "#12718E" : "#EADFC9" }}>
-                <MiniJersey team={t} />
-                <span style={S.closetName}>{t.flag} {t.name}</span>
-                {eq && <span style={S.equippedTag}>worn</span>}
-              </button>
+              <div key={id} style={S.closetTeam}>
+                <div style={S.closetTeamName}>{t.flag} {t.name}</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["home", "away"].map((v) => {
+                    const eq = kit.team === id && (kit.variant || "home") === v;
+                    return (
+                      <button key={v} className="focusable" onClick={() => onEquip(id, v)} title={`Wear ${t.name} ${v} kit`}
+                        style={{ ...S.closetTile, width: 66, borderColor: eq ? "#12718E" : "#EADFC9" }}>
+                        <MiniJersey kit={t[v]} size={40} flag={t.flag} />
+                        <span style={S.closetName}>{v === "home" ? "Home" : "Away"}</span>
+                        {eq && <span style={S.equippedTag}>worn</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
-        {(kit.closet || []).length === 0 && tokens === 0 && <div style={S.lockerHint}>Keep your daily streak going to earn jersey claims, then collect teams here.</div>}
+        {(kit.closet || []).length === 0 && tokens === 0 && <div style={S.lockerHint}>Keep your daily streak going to earn jersey claims, then collect teams here — each comes with a home and away kit.</div>}
       </div>
 
       <div style={S.lockerCard}>
@@ -783,12 +809,12 @@ function LockerView({ progress, onBack, onAvatar, onClaim, onEquip }) {
                 const claimable = !have && tokens > 0;
                 return (
                   <button key={t.id} className="focusable" disabled={!claimable && !have}
-                    onClick={() => have ? onEquip(t.id) : claimable ? onClaim(t.id) : null}
-                    title={have ? "Owned — tap to wear" : claimable ? "Claim this jersey" : "Earn a streak to claim"}
+                    onClick={() => have ? onEquip(t.id, "home") : claimable ? onClaim(t.id) : null}
+                    title={have ? "Owned — tap to wear home kit" : claimable ? "Claim this team (home + away)" : "Earn a streak to claim"}
                     style={{ ...S.teamTile, opacity: have || claimable ? 1 : 0.45,
                       cursor: have || claimable ? "pointer" : "default",
                       borderColor: kit.team === t.id ? "#12718E" : have ? "#2BAE8E" : "#EADFC9" }}>
-                    <MiniJersey team={t} size={38} />
+                    <MiniJersey kit={t.home} size={38} flag={t.flag} />
                     <span style={S.teamName}>{t.flag} {t.name}</span>
                     <span style={S.teamState}>{have ? (kit.team === t.id ? "worn" : "owned ✓") : claimable ? "claim 🎟️" : "🔒"}</span>
                   </button>
@@ -963,13 +989,14 @@ function Game({ user, onSwitch }) {
       const k = p.kit;
       if ((k.tokens || 0) <= 0 || (k.closet || []).includes(teamId)) return p;
       const closet = [...(k.closet || []), teamId];
-      return { ...p, kit: { ...k, closet, tokens: k.tokens - 1, team: (k.closet || []).length === 0 ? teamId : k.team } };
+      const firstEver = (k.closet || []).length === 0; // claiming a team owns both its kits
+      return { ...p, kit: { ...k, closet, tokens: k.tokens - 1, team: firstEver ? teamId : k.team, variant: firstEver ? "home" : k.variant } };
     });
   }
-  function equipTeam(teamId) {
+  function equipTeam(teamId, variant = "home") {
     setProgress((p) => {
       if (teamId != null && !(p.kit.closet || []).includes(teamId)) return p;
-      return { ...p, kit: { ...p.kit, team: teamId } };
+      return { ...p, kit: { ...p.kit, team: teamId, variant: teamId == null ? "home" : variant } };
     });
   }
 
@@ -1297,6 +1324,8 @@ const S = {
   tokenBanner: { background: "#FFF4E8", border: "1px solid #F3D7B3", borderRadius: 12, padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#8A4B1E", marginBottom: 12, lineHeight: 1.4 },
   closetTile: { position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, width: 92, padding: "10px 6px", borderRadius: 14, border: "2px solid #EADFC9", background: "#FAFCFB", cursor: "pointer", fontFamily: "inherit" },
   closetName: { fontSize: 11.5, fontWeight: 700, color: INK, textAlign: "center", lineHeight: 1.2 },
+  closetTeam: { display: "flex", flexDirection: "column", gap: 5, padding: "8px 8px 10px", borderRadius: 14, border: "1px solid #EADFC9", background: "#fff" },
+  closetTeamName: { fontSize: 11.5, fontWeight: 800, color: INK, textAlign: "center", maxWidth: 140 },
   equippedTag: { position: "absolute", top: -7, right: -7, background: "#12718E", color: "#fff", fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 99 },
   confTitle: { fontSize: 12, fontWeight: 800, color: "#8AA0A4", letterSpacing: ".05em", textTransform: "uppercase", marginBottom: 8 },
   teamGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(98px,1fr))", gap: 8 },
