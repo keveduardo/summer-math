@@ -120,10 +120,17 @@ function genOneStepEq() {
 }
 function genOneStepIneq() {
   const op = pick(["<", ">", "≤", "≥"]);
-  if (pick(["add", "mul"]) === "add") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x + b;
-    return { type: "numeric", prompt: `Solve:   x + ${b} ${op} ${c}\nx ${op} ?`, value: x, tol: 0.011, display: `x ${op} ${x}`, explain: `Subtract ${b}: x ${op} ${c} − ${b} = ${x}.` }; }
-  const a = rnd(2, 6), x = rnd(-6, 8); const c = a * x;
-  return { type: "numeric", prompt: `Solve:   ${a}x ${op} ${c}\nx ${op} ?`, value: x, tol: 0.011, display: `x ${op} ${x}`, explain: `Divide by ${a} (positive, so keep the sign): x ${op} ${x}.` };
+  const flip = { "<": ">", ">": "<", "≤": "≥", "≥": "≤" };
+  const t = pick(["add", "sub", "pos", "neg"]);
+  if (t === "add") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x + b;
+    return { type: "inequality", op, value: x, tol: 0.011, prompt: `Solve for x:   x + ${b} ${op} ${c}`, display: `x ${op} ${x}`, explain: `Subtract ${b} from both sides → x ${op} ${x}.` }; }
+  if (t === "sub") { const x = rnd(-8, 12), b = rnd(1, 12); const c = x - b;
+    return { type: "inequality", op, value: x, tol: 0.011, prompt: `Solve for x:   x − ${b} ${op} ${c}`, display: `x ${op} ${x}`, explain: `Add ${b} to both sides → x ${op} ${x}.` }; }
+  if (t === "pos") { const a = rnd(2, 6), x = rnd(-6, 8); const c = a * x;
+    return { type: "inequality", op, value: x, tol: 0.011, prompt: `Solve for x:   ${a}x ${op} ${c}`, display: `x ${op} ${x}`, explain: `Divide both sides by ${a} (positive — keep the sign) → x ${op} ${x}.` }; }
+  // negative coefficient → dividing by a negative FLIPS the inequality (the key skill)
+  const a = rnd(2, 6), x = rnd(-6, 8); const c = -a * x; const fop = flip[op];
+  return { type: "inequality", op: fop, value: x, tol: 0.011, prompt: `Solve for x:   −${a}x ${op} ${c}`, display: `x ${fop} ${x}`, explain: `Divide both sides by −${a}. Dividing by a negative flips the sign → x ${fop} ${x}.` };
 }
 
 /* ---- Unit 4: Ratios, Proportions & Percents ---- */
@@ -219,7 +226,9 @@ function genMAD() {
 
 function parseNum(s) {
   if (s == null) return null;
-  let t = String(s).trim().replace(/[$%°]/g, ""); // keep spaces: needed for mixed numbers
+  // normalize unicode minus/dashes to ASCII "-"; keep spaces (needed for mixed numbers)
+  let t = String(s).trim().replace(/[−–—]/g, "-").replace(/[$%°]/g, "");
+  t = t.replace(/^[a-z]\s*=\s*/i, ""); // accept the displayed form "x = 5" / "y=3"
   if (t === "" || t === "-") return null;
   // mixed number, e.g. "1 1/15" = 1 + 1/15 = 16/15 (sign of whole applies to the fraction)
   const mixed = t.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);
@@ -232,8 +241,23 @@ function parseNum(s) {
   if (t.includes("/")) { const [a, b] = t.split("/"); const na = Number(a), nb = Number(b); if (!isFinite(na) || !isFinite(nb) || nb === 0) return null; return na / nb; }
   const n = Number(t); return isFinite(n) ? n : null;
 }
+// Parses an inequality answer like "x > 5", "> 5", ">=5" -> { op, val }. Accepts >=,<= for ≥,≤.
+function parseInequality(s) {
+  if (s == null) return null;
+  let t = String(s).trim().toLowerCase().replace(/[−–—]/g, "-").replace(/\s+/g, "");
+  t = t.replace(/^x/, "");
+  const m = t.match(/^(>=|=>|<=|=<|≥|≤|>|<)(.+)$/);
+  if (!m) return null;
+  const op = { ">=": "≥", "=>": "≥", "<=": "≤", "=<": "≤", "≥": "≥", "≤": "≤", ">": ">", "<": "<" }[m[1]];
+  const val = parseNum(m[2]);
+  return op && val !== null ? { op, val } : null;
+}
 function isCorrect(problem, input, choiceIndex) {
   if (problem.type === "choice") return choiceIndex === problem.answerIndex;
+  if (problem.type === "inequality") {
+    const a = parseInequality(input);
+    return !!a && a.op === problem.op && Math.abs(a.val - problem.value) <= (problem.tol || 0.011);
+  }
   const v = parseNum(input);
   if (v === null) return false;
   return Math.abs(v - problem.value) <= (problem.tol || 0.011);
@@ -430,7 +454,7 @@ function loadProgress(key) {
   return normalizeProgress(null);
 }
 function snapshot(p) {
-  return { key: p.key, topicId: p.topicId, type: p.type, prompt: p.prompt, display: p.display, explain: p.explain, value: p.value, tol: p.tol, answerIndex: p.answerIndex, choices: p.choices, hits: 0 };
+  return { key: p.key, topicId: p.topicId, type: p.type, prompt: p.prompt, display: p.display, explain: p.explain, value: p.value, tol: p.tol, op: p.op, answerIndex: p.answerIndex, choices: p.choices, hits: 0 };
 }
 function applyAnswer(p, correct, problem) {
   const today = dayStr(); let { streak, lastDay } = p; let today_ = p.today;
@@ -1252,7 +1276,11 @@ function PracticeView({ problem, mode, activeName, reviewDone, queueLen, input, 
           </div>
         )}
       </div>
-      <div style={{ textAlign: "center", color: "#8AA0A4", fontSize: 12.5, marginTop: 14 }}>Type a number, a fraction like <code>3/4</code>, or a decimal. Press Enter to check.</div>
+      <div style={{ textAlign: "center", color: "#8AA0A4", fontSize: 12.5, marginTop: 14 }}>
+        {problem.type === "inequality"
+          ? <>Type the full answer with the sign, like <code>x &gt; 5</code> (use <code>&gt;=</code> / <code>&lt;=</code> for ≥ / ≤). Press Enter to check.</>
+          : <>Type a number, a fraction (<code>3/4</code>), a mixed number (<code>1 1/15</code>), or a decimal. Press Enter to check.</>}
+      </div>
     </main>
   );
 }
